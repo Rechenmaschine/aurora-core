@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+    "aurora_hal",
+    "aurora_hal/aurora_hal_macros"
+]
