@@ -1,0 +1,17 @@
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build_and_test:
+    name: Build everything
+    runs-on: ubuntu-latest
+    container: rust
+    steps:
+    - uses: bewee/rustdoc-coverage-action@v1
+    - run: cargo build
