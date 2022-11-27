@@ -13,4 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     container: rust
     steps:
+    - run: pwd
+    - run: ls -lah
     - run: cargo build
