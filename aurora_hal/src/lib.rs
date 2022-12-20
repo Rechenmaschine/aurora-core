@@ -1,6 +1,4 @@
-use aurora_hal_macros::DataTree;
+use aurora_hal_macros::add_fields;
 
-#[derive(DataTree)]
-struct Tree {
-    x: u8,
-}
+#[add_fields]
+struct Tree {}
