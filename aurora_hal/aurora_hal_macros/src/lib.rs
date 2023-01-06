@@ -4,6 +4,7 @@ use quote::quote;
 use syn::{parse::Parser, parse_macro_input, DeriveInput};
 use toml::Value;
 
+
 #[proc_macro_attribute]
 pub fn add_fields(_args: TokenStream, input: TokenStream) -> TokenStream {
     let mut ast = parse_macro_input!(input as DeriveInput);
