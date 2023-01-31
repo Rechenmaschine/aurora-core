@@ -8,9 +8,17 @@ edition = "2021"
 [lib]
 proc_macro = true
 
+[build-dependencies]
+lalrpop = "0.19.7"
+
 [dependencies]
 syn = { version = "2.0", features = ["extra-traits"] }
 toml = { version = "0.4.2" }
 serde = "1.0.149"
 quote = "1.0"
 proc-macro2 = "*"
+bytemuck = "1.12.3"
+lalrpop-util = "0.19.7"
+regex = "1"
+atomic = "0.5.1"
+atomic_float = "0.1.0"

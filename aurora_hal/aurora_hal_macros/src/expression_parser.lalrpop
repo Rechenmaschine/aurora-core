@@ -1,0 +1,133 @@
+grammar;
+
+
+
+
+pub Expr: String = {
+//    <l:Rest> <v:Var> <r:Rest> => {
+//        let mut res = String::from(l);
+//        res.push_str(v.as_str());
+//        res.push_str(r.as_str());
+//        res
+//    },
+
+    <v:Var> <r:Rest> => {
+        let mut res = String::from(v);
+        res.push_str(r.as_str());
+        res
+    },
+//
+//    <r:Rest> <v:Var> => {
+//        let mut res = String::from(r);
+//        res.push_str(v.as_str());
+//        res
+//    },
+
+
+}
+
+pub Var: String = {
+    "Process" <rest: r"(\.([a-zA-Z0-9])+)+"> => {
+        let mut res = String::new();
+        res.push_str("self.Process.read().unwrap()");
+        let mut mem = rest.split(".").peekable();
+        mem.next();
+        while let Some(m) = mem.next() {
+            if mem.peek() != None {
+                res.push_str(".m_");
+            } else {
+                res.push_str(".");
+            }
+            res.push_str(m);
+        }
+        res
+    },
+
+    "Control" <rest: r"(\.([a-zA-Z0-9])+)+"> => {
+        let mut res = String::new();
+        res.push_str("self.Control.lock()");
+        let mut mem = rest.split(".").peekable();
+        mem.next();
+        while let Some(m) = mem.next() {
+            if mem.peek() != None {
+                res.push_str(".m_");
+            } else {
+                res.push_str(".");
+            }
+            res.push_str(m);
+        }
+        res
+    },
+}
+
+//pub nested_stuff: String = {
+//    <n: r"(\.([a-zA-Z0-9])+)+"> => String::from(n),
+//
+//}
+
+pub Rest: String = {
+    <s: r"([[0-9]/\&\+[-]\*\|><=\s]+)?"> => String::from(s),
+    <v: Expr> => String::from(v),
+}
+
+
+
+//pub Logical: String = {
+//    <l:Logical> "&&" <r:Expr> => { l.push_str("&&");
+//                                    l.push_str(r);
+//                                    l
+//                                  },
+//    <l:Logical> "||" <r:Expr> => { l.push_str("||");
+//                                    l.push_str(r);
+//                                    l
+//                                  },
+//    "!" <r:Logical> => { let l = String::from("!");
+//                            l.push_str(r);
+//                            l
+//                        },
+//    Comp,
+//}
+//
+//
+//pub Comp: String = {
+//    <l:Expr> ">" <r:Expr> => {
+//
+//
+//
+//
+//}
+//
+//
+//pub Expr: String = {
+//    <l:Expr> "+" <r:Factor> => { l.push_str("+");
+//                                    l.push_str(r);
+//                                    l
+//                                },
+//    <l:Expr> "-" <r:Factor> => { l.push_str("-");
+//                                    l.push_str(r);
+//                                    l
+//                                },
+//    Factor,
+//};
+//
+//Factor: String = {
+//    <l:Factor> "*" <r:Term> => { l.push_str("*");
+//                                    l.push_str(r);
+//                                    l
+//                               },
+//    <l:Factor> "/" <r:Term> => { l.push_str("/");
+//                                    l.push_str(r);
+//                                    l
+//                                },
+//    Term,
+//};
+//
+//Term: String = {
+//    Num,
+//    "(" <Expr> ")",
+//};
+//
+//Num: String = {
+//    r"[0-9]+" => <>,
+//    r"[0-9]+.+[0-9]" => <>,
+//};

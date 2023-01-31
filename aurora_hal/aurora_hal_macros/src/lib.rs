@@ -1,8 +1,12 @@
 extern crate proc_macro;
+
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse::Parser, parse_macro_input, DeriveInput};
 use toml::Value;
+#[macro_use] extern crate lalrpop_util;
+
+lalrpop_mod!(expression_parser);
 
 
 #[proc_macro_attribute]
@@ -11,7 +15,7 @@ pub fn add_fields(_args: TokenStream, input: TokenStream) -> TokenStream {
     //let name = &ast.ident;
 
     //Import file that defines the required struct
-    let toml = include_str!("struct.toml");
+    let toml = include_str!("CentralDataStruct.toml");
     let toml = toml.parse::<Value>().unwrap();
 
     //Add the fields for Control and Process Variables to the Struct
@@ -95,3 +99,118 @@ fn build_struct(key: &str, value: &Value) -> (Option<String>, Option<String>) {
         _ => (None, None),
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+#[proc_macro_derive(init_callbacks)]
+pub fn add_init(input: TokenStream) -> TokenStream {
+    let ast = parse_macro_input!(input as DeriveInput);
+
+    let toml = include_str!("Callbacks.toml");
+    let toml = toml.parse::<Value>().unwrap();
+
+    let name = ast.ident.to_string();
+    println!("{}", name);
+
+    let mut callback_code = String::new();
+
+    match toml {
+        Value::Table(table) => {
+            for (callback_name, v) in table.iter() {
+                if let Value::Table(callback_def) = v {
+                    let mut owning_variable = String::new();
+                    let mut condition = String::new();
+                    let mut callback = String::new();
+                    for (key, value) in callback_def {
+                        match key.as_str() {
+                            "var" => {
+                                if let Value::String(var) = value {
+                                    owning_variable.push_str(
+                                        build_var_path(var).as_str()
+                                    );
+                                }
+                            }
+                            "condition" => {
+                                if let Value::String(cond) = value {
+                                    let res = expression_parser::ExprParser::new().parse(cond.as_str()).expect("Couldn't parse condition");
+                                    println!("{}", res);
+                                    condition.push_str(res.as_str());
+                                }
+                            }
+                            "callback" => {
+                                if let Value::String(cb) = value {
+                                    let res = expression_parser::ExprParser::new().parse(cb.as_str()).expect(&format!("Couldn't parse callback: {}", cb));
+                                    println!("{}", res);
+                                    callback.push_str(res.as_str());
+                                }
+                            }
+                            _ => panic!("Unknown entry in callback definition"),
+                        }
+                    }
+                    if owning_variable.len() > 0 && condition.len() > 0 && callback.len() > 0 {
+                        callback_code.push_str(&format!("{}.callbacks.register_callback(Box::new(||{{{};}}), Condition{{ eval: Box::new(||{{{}}})}});\n",
+                                                        owning_variable, callback, condition));
+                        println!("Callback Code: {}", callback_code);
+                    } else {
+                        panic!("Callback is missing either an owning variable, a condition or a callback function");
+                    }
+                } else {
+                    panic!("Syntax error in Callback.toml");
+                }
+            }
+        }
+        _ => panic!("Callbacks.toml parsed incorrectly")
+    }
+
+    let struct_name: proc_macro2::TokenStream = name.parse().unwrap();
+    let cb_tokens: proc_macro2::TokenStream = callback_code.parse().unwrap();
+
+
+    return quote!{
+        impl #struct_name {
+            pub fn init(&self) {
+                #cb_tokens
+            }
+        }
+    }.into();
+}
+
+
+fn build_var_path(s: &String) -> String {
+    let mut path = String::new();
+    if s.contains("Process") {
+        path.push_str("self.Process.read().unwrap().");
+    } else if s.contains("Control") {
+        path.push_str("self.Control.lock().");
+    } else {
+        panic!("Trying to access non-Process and non-Control variable")
+    }
+    let mut members = s.split(".").peekable();
+    members.next();
+
+    while let Some(member) = members.next() {
+        if !members.peek().is_none() {
+            path.push_str("m_");
+            path.push_str(member);
+            path.push('.');
+        } else {
+            path.push_str(member);
+        }
+    }
+    path
+}
+
+fn parse_condition(s: String) -> String {
+
+    String::new()
+}
+
+
