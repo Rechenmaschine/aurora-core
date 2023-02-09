@@ -4,6 +4,9 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse::Parser, parse_macro_input, DeriveInput};
 use toml::Value;
+use std::sync::{atomic, RwLock};
+use atomic_float::{AtomicF32, AtomicF64};
+
 #[macro_use] extern crate lalrpop_util;
 
 lalrpop_mod!(expression_parser);
@@ -71,8 +74,18 @@ fn build_struct(key: &str, value: &Value) -> (Option<String>, Option<String>) {
 
     match value {
         Value::String(var_type) => {
-            struct_def.push_str(&format!("{key}: {var_type},\n"));
-            (Some(struct_def), None)
+            match var_type.as_str() {
+                "u64" | "u32" | "u16" | "i64" | "i32" | "i16" | "f64" | "f32" | "bool" => {
+                    struct_def.push_str(&format!("{}: Value<Atomic{}>,\n", key, var_type.to_uppercase()));
+                    return (Some(struct_def), None);
+                }
+
+                "String" | "string" => {
+                    struct_def.push_str(&format!("{}: Value<std::sync::RwLock<String>>,\n", key));
+                    return (Some(struct_def), None);
+                }
+                _ => panic!("Variable type unknown"),
+            }
         }
         Value::Table(table) => {
             rest.push_str(&format!("struct {key} {{\n"));
@@ -104,12 +117,6 @@ fn build_struct(key: &str, value: &Value) -> (Option<String>, Option<String>) {
 
 
 
-
-
-
-
-
-
 #[proc_macro_derive(init_callbacks)]
 pub fn add_init(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
@@ -134,20 +141,20 @@ pub fn add_init(input: TokenStream) -> TokenStream {
                             "var" => {
                                 if let Value::String(var) = value {
                                     owning_variable.push_str(
-                                        build_var_path(var).as_str()
+                                        build_var_path(var).as_str() //TODO Replace this line with a call to lalrpop
                                     );
                                 }
                             }
                             "condition" => {
                                 if let Value::String(cond) = value {
-                                    let res = expression_parser::ExprParser::new().parse(cond.as_str()).expect("Couldn't parse condition");
+                                    let res = expression_parser::AssignmentParser::new().parse(cond.as_str()).expect("Couldn't parse condition");
                                     println!("{}", res);
                                     condition.push_str(res.as_str());
                                 }
                             }
                             "callback" => {
                                 if let Value::String(cb) = value {
-                                    let res = expression_parser::ExprParser::new().parse(cb.as_str()).expect(&format!("Couldn't parse callback: {}", cb));
+                                    let res = expression_parser::AssignmentParser::new().parse(cb.as_str()).expect(&format!("Couldn't parse callback: {}", cb));
                                     println!("{}", res);
                                     callback.push_str(res.as_str());
                                 }
@@ -156,7 +163,7 @@ pub fn add_init(input: TokenStream) -> TokenStream {
                         }
                     }
                     if owning_variable.len() > 0 && condition.len() > 0 && callback.len() > 0 {
-                        callback_code.push_str(&format!("{}.callbacks.register_callback(Box::new(||{{{};}}), Condition{{ eval: Box::new(||{{{}}})}});\n",
+                        callback_code.push_str(&format!("{}.register_callback(Box::new(||{{{};}}), Condition{{ eval: Box::new(||{{{}}})}});\n",
                                                         owning_variable, callback, condition));
                         println!("Callback Code: {}", callback_code);
                     } else {
@@ -187,9 +194,9 @@ pub fn add_init(input: TokenStream) -> TokenStream {
 fn build_var_path(s: &String) -> String {
     let mut path = String::new();
     if s.contains("Process") {
-        path.push_str("self.Process.read().unwrap().");
+        path.push_str("self.Process.");
     } else if s.contains("Control") {
-        path.push_str("self.Control.lock().");
+        path.push_str("self.Control.");
     } else {
         panic!("Trying to access non-Process and non-Control variable")
     }
@@ -207,10 +214,4 @@ fn build_var_path(s: &String) -> String {
     }
     path
 }
-
-fn parse_condition(s: String) -> String {
-
-    String::new()
-}
-
 

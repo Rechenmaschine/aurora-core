@@ -9,8 +9,9 @@
     z_acc = "u64"
 
 [Control]
+state = "String"
     [Control.Actuator1]
-    x = "i32"
+    x = "f32"
     y = "i32"
 
     [Control.Actuator2]

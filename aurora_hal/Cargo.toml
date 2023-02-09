@@ -7,3 +7,6 @@ edition = "2021"
 
 [dependencies]
 aurora_hal_macros = { path = "aurora_hal_macros" }
+atomic_float = "0.1.0"
+#atomic-traits = "0.3.0"
+cfg-if = "1.0.0"
