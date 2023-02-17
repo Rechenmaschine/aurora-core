@@ -2,61 +2,85 @@ grammar;
 
 
 pub Assignment: String = {
-    <v:Var> "=" <e:Comparison> => {
+    <v:Var> "=" <c:Comparison> => {
         let mut res = String::from(v.clone());
         res.push_str(".set(");
-        res.push_str(e.as_str());
+        res.push_str(c.as_str());
         res.push_str(");");
         res
     },
 
-    <v:Var> "+=" <e:Comparison> => {
+    <v:Var> "+=" <c:Comparison> => {
         let mut res = String::from(v.clone());
         res.push_str(".set(");
         res.push_str(v.as_str());
         res.push_str(".get() + ");
-        res.push_str(e.as_str());
+        res.push_str(c.as_str());
         res.push_str(");");
         res
     },
 
-    <v:Var> "-=" <e:Comparison> => {
+    <v:Var> "-=" <c:Comparison> => {
         let mut res = String::from(v.clone());
         res.push_str(".set(");
         res.push_str(v.as_str());
         res.push_str(".get() - ");
-        res.push_str(e.as_str());
+        res.push_str(c.as_str());
         res.push_str(");");
         res
     },
 
-    <v:Var> "*=" <e:Comparison> => {
+    <v:Var> "*=" <c:Comparison> => {
         let mut res = String::from(v.clone());
         res.push_str(".set(");
         res.push_str(v.as_str());
         res.push_str(".get() * ");
-        res.push_str(e.as_str());
+        res.push_str(c.as_str());
         res.push_str(");");
         res
     },
 
-    <v:Var> "/=" <e:Comparison> => {
+    <v:Var> "/=" <c:Comparison> => {
         let mut res = String::from(v.clone());
         res.push_str(".set(");
         res.push_str(v.as_str());
         res.push_str(".get() / ");
-        res.push_str(e.as_str());
+        res.push_str(c.as_str());
         res.push_str(");");
         res
     },
 
-    <e:Comparison> => {
+    <e:Logical> => {
         let mut res = String::from(e);
         res.push_str(";");
         res
     }
 };
 
+
+pub Logical: String = {
+    <l:Logical> "&&" <c:Comparison> => {
+        let mut res = String::from(l);
+        res.push_str("&&");
+        res.push_str(c.as_str());
+        res
+    },
+
+    <l:Logical> "||" <c:Comparison> => {
+        let mut res = String::from(l);
+        res.push_str("||");
+        res.push_str(c.as_str());
+        res
+    },
+
+    "!" <c:Comparison> => {
+        let mut res = String::from("!");
+        res.push_str(c.as_str());
+        res
+    },
+
+    Comparison,
+}
 
 pub Comparison: String = {
     <e:Expr> "==" <f:Expr> => {
@@ -147,7 +171,12 @@ pub Factor: String = {
 
 pub Term: String = {
     Num,
-    Var,
+    <v:Var> => {
+        let mut res = String::from(v);
+        res.push_str(".get() ");
+        res
+    },
+
     "(" <e:Expr> ")" => {
         let mut res = String::from("(");
         res.push_str(e.as_str());

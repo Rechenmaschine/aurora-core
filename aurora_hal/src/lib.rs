@@ -1,4 +1,6 @@
 #![allow(dead_code)]
+#![allow(unconditional_recursion)]
+#![allow(unused_imports)]
 
 #[macro_use]
 extern crate cfg_if;
@@ -6,10 +8,11 @@ mod atomic_traits;
 
 use std::ops::Deref;
 use std::sync::{atomic, RwLock};
-use aurora_hal_macros::{add_fields, init_callbacks};
+use aurora_hal_macros::{add_fields, Callbacks};
 use atomic::{AtomicI64, AtomicU64, AtomicI32, AtomicU32, AtomicI16, AtomicU16, AtomicBool};
 use atomic_float::{AtomicF32, AtomicF64};
 use atomic_traits::{Atomic};
+use std::sync::Arc;
 
 
 struct Condition {
@@ -22,14 +25,14 @@ struct Value<T> {
     callbacks: RwLock<Vec<(Condition, Box<dyn Fn()>)>>,
 }
 
-impl<T: Sync + Atomic> Value<T> {
-    pub fn register_callback(&mut self, callback: Box<dyn Fn()>, condition: Condition) {
-        self.callbacks.get_mut()
+impl<T: Atomic> Value<T> {
+    pub fn register_callback(&self, callback: Box<dyn Fn()>, condition: Condition) {
+        self.callbacks.write()
             .unwrap()
             .push((condition, callback));
     }
 
-    pub fn set(&mut self, val: T::Type) {
+    pub fn set(&self, val: T::Type) {
         self.val.store(val, atomic::Ordering::Release);
 
         for (ref condition, callback) in self.callbacks.read().unwrap().deref() {
@@ -45,17 +48,17 @@ impl<T: Sync + Atomic> Value<T> {
 }
 
 impl Value<RwLock<String>> {
-    pub fn register_callback(&mut self, callback: Box<dyn Fn()>, condition: Condition) {
-        self.callbacks.get_mut()
+    pub fn register_callback(&self, callback: Box<dyn Fn()>, condition: Condition) {
+        self.callbacks.write()
             .unwrap()
             .push((condition, callback));
     }
 
-    pub fn set(&mut self, val: String) {
+    pub fn set(&self, val: String) {
         let mut s = self.val.write().unwrap();
         *s = val;
 
-        for (ref condition, callback) in self.callbacks.read().unwrap().deref() {
+        for (condition, callback) in self.callbacks.read().unwrap().deref() {
             if condition.eval.deref()() == true {
                 callback.deref()();
             }
@@ -68,5 +71,5 @@ impl Value<RwLock<String>> {
 }
 
 #[add_fields]
-#[derive(init_callbacks)]
+#[derive(Callbacks)]
 struct CentralDataStruct {}
