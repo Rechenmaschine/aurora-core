@@ -15,24 +15,28 @@ use atomic_traits::{Atomic};
 use std::sync::Arc;
 
 
-struct Condition {
+pub struct Condition {
     eval: Box<dyn Fn() -> bool>,
 }
 
 
-struct Value<T> {
+pub struct Value<T> {
     val: T,
     callbacks: RwLock<Vec<(Condition, Box<dyn Fn()>)>>,
 }
 
-impl<T: Atomic> Value<T> {
-    pub fn register_callback(&self, callback: Box<dyn Fn()>, condition: Condition) {
-        self.callbacks.write()
-            .unwrap()
-            .push((condition, callback));
-    }
 
-    pub fn set(&self, val: T::Type) {
+pub trait GetterSetter {
+    type InnerType;
+    fn set(&self, val: Self::InnerType);
+    fn get(&self)-> Self::InnerType;
+}
+
+
+impl<T: Atomic> GetterSetter for Value<T> {
+    type InnerType = <T as Atomic>::Type;
+
+    fn set(&self, val: Self::InnerType) {
         self.val.store(val, atomic::Ordering::Release);
 
         for (ref condition, callback) in self.callbacks.read().unwrap().deref() {
@@ -42,19 +46,16 @@ impl<T: Atomic> Value<T> {
         }
     }
 
-    pub fn get(&self) -> <T as Atomic>::Type {
+    fn get(&self) -> Self::InnerType {
         self.val.load(atomic::Ordering::Acquire)
     }
 }
 
-impl Value<RwLock<String>> {
-    pub fn register_callback(&self, callback: Box<dyn Fn()>, condition: Condition) {
-        self.callbacks.write()
-            .unwrap()
-            .push((condition, callback));
-    }
 
-    pub fn set(&self, val: String) {
+impl GetterSetter for Value<RwLock<String>> {
+    type InnerType = String;
+
+    fn set(&self, val: Self::InnerType) {
         let mut s = self.val.write().unwrap();
         *s = val;
 
@@ -65,10 +66,29 @@ impl Value<RwLock<String>> {
         }
     }
 
-    pub fn get(&self) -> String {
-        self.val.read().unwrap().deref().clone() //TODO: Maybe return a reference here? -> Problem with standardized access, we don't get a reference to the atomic variables
+    fn get(&self) -> Self::InnerType {
+        self.val.read().unwrap().deref().clone()
     }
 }
+
+
+impl<T> Value<T> {
+    pub fn new(val: T) -> Value<T> {
+        let x: Vec<(Condition, Box<dyn Fn()>)> = Vec::new();
+        Value {
+            val,
+            callbacks: RwLock::new(x),
+        }
+    }
+
+    pub fn register_callback(&self, callback: Box<dyn Fn()>, condition: Condition) {
+        self.callbacks.write()
+            .unwrap()
+            .push((condition, callback));
+    }
+}
+
+
 
 #[add_fields]
 #[derive(Callbacks)]

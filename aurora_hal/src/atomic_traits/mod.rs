@@ -1,49 +1,49 @@
-//! The traits for generic atomic operations
-//!
-//! # Compatibility
-//!
-//! The crate is tested for rustc 1.8 and greater.
-//!
-//! # Example
-//!
-//! ```
-//! # extern crate num_traits;
-//! # extern crate atomic_traits;
-//! use std::sync::atomic::{AtomicUsize, Ordering};
-//!
-//! use num_traits::One;
-//! use atomic_traits::{Atomic, NumOps, fetch};
-//! # use atomic_traits::fetch::{Add, Sub};
-//!
-//! #[derive(Debug, Default)]
-//! pub struct RefCnt<T>(T);
-//!
-//! impl<T> RefCnt<T>
-//! where
-//!     T: Atomic + NumOps + Default,
-//!     <T as Atomic>::Type: One
-//! {
-//!     pub fn inc(&self) -> <T as Atomic>::Type {
-//!         self.0.fetch_add(<T as Atomic>::Type::one(), Ordering::Acquire)
-//!     }
-//!
-//!     pub fn dec(&self) -> <T as Atomic>::Type {
-//!         self.0.fetch_sub(<T as Atomic>::Type::one(), Ordering::Release)
-//!     }
-//!
-//!     pub fn val(&self) -> <T as Atomic>::Type {
-//!         self.0.load(Ordering::SeqCst)
-//!     }
-//! }
-//!
-//! # fn main() {
-//! let refcnt = RefCnt::<AtomicUsize>::default();
-//!
-//! assert_eq!(refcnt.inc(), 0);
-//! assert_eq!(refcnt.dec(), 1);
-//! assert_eq!(refcnt.val(), 0);
-//! # }
-//! ```
+// The traits for generic atomic operations
+//
+// # Compatibility
+//
+// The crate is tested for rustc 1.8 and greater.
+//
+// # Example
+//
+// ```
+// # extern crate num_traits;
+// # extern crate atomic_traits;
+// use std::sync::atomic::{AtomicUsize, Ordering};
+//
+// use num_traits::One;
+// use atomic_traits::{Atomic, NumOps, fetch};
+// # use atomic_traits::fetch::{Add, Sub};
+//
+// #[derive(Debug, Default)]
+// pub struct RefCnt<T>(T);
+//
+// impl<T> RefCnt<T>
+// where
+//     T: Atomic + NumOps + Default,
+//     <T as Atomic>::Type: One
+// {
+//     pub fn inc(&self) -> <T as Atomic>::Type {
+//         self.0.fetch_add(<T as Atomic>::Type::one(), Ordering::Acquire)
+//     }
+//
+//     pub fn dec(&self) -> <T as Atomic>::Type {
+//         self.0.fetch_sub(<T as Atomic>::Type::one(), Ordering::Release)
+//     }
+//
+//     pub fn val(&self) -> <T as Atomic>::Type {
+//         self.0.load(Ordering::SeqCst)
+//     }
+// }
+//
+// # fn main() {
+// let refcnt = RefCnt::<AtomicUsize>::default();
+//
+// assert_eq!(refcnt.inc(), 0);
+// assert_eq!(refcnt.dec(), 1);
+// assert_eq!(refcnt.val(), 0);
+// # }
+// ```
 #![deny(missing_docs)]
 
 use std::sync::atomic::*;
