@@ -16,13 +16,13 @@ use std::sync::Arc;
 
 
 pub struct Condition {
-    eval: Box<dyn Fn() -> bool>,
+    pub eval: Box<dyn Fn() -> bool + Send + Sync>,
 }
 
 
 pub struct Value<T> {
-    val: T,
-    callbacks: RwLock<Vec<(Condition, Box<dyn Fn()>)>>,
+    pub val: T,
+    pub callbacks: RwLock<Vec<(Condition, Box<dyn Fn() + Send + Sync>)>>,
 }
 
 
@@ -73,15 +73,15 @@ impl GetterSetter for Value<RwLock<String>> {
 
 
 impl<T> Value<T> {
-    pub fn new(val: T) -> Value<T> {
-        let x: Vec<(Condition, Box<dyn Fn()>)> = Vec::new();
+    pub const fn new(val: T) -> Value<T> {
+        let x: Vec<(Condition, Box<dyn Fn() + Send + Sync>)> = Vec::new();
         Value {
             val,
             callbacks: RwLock::new(x),
         }
     }
 
-    pub fn register_callback(&self, callback: Box<dyn Fn()>, condition: Condition) {
+    pub fn register_callback(&self, callback: Box<dyn Fn() + Send + Sync>, condition: Condition) {
         self.callbacks.write()
             .unwrap()
             .push((condition, callback));

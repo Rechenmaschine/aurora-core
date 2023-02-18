@@ -162,7 +162,7 @@ pub fn derive_callbacks(input: TokenStream) -> TokenStream {
                     if (owning_variable.len() > 0) && (condition.len() > 0) && (callback.len() > 0) {
                         callback_code.push_str(&format!("{}.register_callback(Box::new(||{{{}}}), Condition{{ eval: Box::new(||{{{}}})}});\n",
                                                         owning_variable, callback, condition));
-                        println!("Callback Code: {}", callback_code);
+                        // println!("Callback Code: {}", callback_code);
                     } else {
                         panic!("Callback is missing either an owning variable, a condition or a callback function");
                     }
