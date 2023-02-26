@@ -88,26 +88,60 @@ fn build_struct(key: &str, value: &Value) -> (Option<String>, Option<String>) {
             }
         }
         Value::Table(table) => {
-            rest.push_str(&format!("struct {key} {{\n"));
-
+            let mut Type: Option<String> = None;
+            let mut Size: Option<String> = None;
             for (k, v) in table.iter() {
-                let (struct_res, sub_structs) = build_struct(k, v);
-                match struct_res {
-                    Some(val) => {
-                        rest.push_str(&val);
+                if k == "type" {
+                    if let Value::String(t) = v {
+                        Type = Some(String::from(t));
+                    } else {
+                        panic!("The value of a 'type' field in the struct config must be a String");
                     }
-                    None => {}
                 }
-                match sub_structs {
-                    Some(defs) => {
-                        rest = format!("{defs}{rest}");
+                if k == "size" {
+                    if let Value::Integer(s) = v {
+                        Size = Some(s.to_string());
+                    } else {
+                        panic!("The value of a 'size' field in the struct config must be an Integer");
                     }
-                    None => {}
                 }
             }
-            rest.push_str("}\n\n");
-            struct_def = format!("m_{key}: {key},\n");
-            (Some(struct_def), Some(rest))
+
+            if Type != None && Size != None {
+                let t = Type.unwrap();
+                let s = Size.unwrap();
+                if s != "0" {
+                    let res = String::from(format!("{}: Value<std::sync::RwLock<[{}; {}]>>,\n", key, t.as_str(), s.as_str()));
+                    println!("Member with history: {}", res);
+                    return (Some(res), None);
+                } else {
+                    let res = String::from(format!("{}: Value<Atomic{}>,\n", key, t.as_str().to_uppercase()));
+                    return (Some(res), None);
+                }
+            } else if Type != None || Size != None {
+                panic!("For values with a history, both the type and the size of the history need to be specified");
+            } else {
+                rest.push_str(&format!("struct {} {{\n", key));
+
+                for (k, v) in table.iter() {
+                    let (struct_res, sub_structs) = build_struct(k, v);
+                    match struct_res {
+                        Some(val) => {
+                            rest.push_str(&val);
+                        }
+                        None => {}
+                    }
+                    match sub_structs {
+                        Some(defs) => {
+                            rest = format!("{}{}", defs, rest);
+                        }
+                        None => {}
+                    }
+                }
+                rest.push_str("}\n\n");
+                struct_def = format!("m_{}: {},\n", key, key);
+                return (Some(struct_def), Some(rest));
+            }
         }
         _ => (None, None),
     }

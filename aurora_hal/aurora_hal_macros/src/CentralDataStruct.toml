@@ -4,9 +4,13 @@
     temp = "u16"
 
     [Process.Sensor2]
-    x_acc = "u64"
     y_acc = "u64"
     z_acc = "u64"
+
+    [Process.Sensor2.x_acc]
+    type = "u64"
+    size = 10
+
 
 [Control]
 state = "String"
