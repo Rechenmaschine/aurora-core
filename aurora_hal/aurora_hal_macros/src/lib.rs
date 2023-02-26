@@ -111,8 +111,7 @@ fn build_struct(key: &str, value: &Value) -> (Option<String>, Option<String>) {
                 let t = Type.unwrap();
                 let s = Size.unwrap();
                 if s != "0" {
-                    let res = String::from(format!("{}: Value<std::sync::RwLock<[{}; {}]>>,\n", key, t.as_str(), s.as_str()));
-                    println!("Member with history: {}", res);
+                    let res = String::from(format!("{}: Value<std::sync::RwLock<RingBuffer<{}, {}>>>,\n", key, t.as_str(), s.as_str()));
                     return (Some(res), None);
                 } else {
                     let res = String::from(format!("{}: Value<Atomic{}>,\n", key, t.as_str().to_uppercase()));

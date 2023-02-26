@@ -21,8 +21,39 @@ pub struct Condition {
 
 
 pub struct Value<T> {
-    pub val: T,
-    pub callbacks: RwLock<Vec<(Condition, Box<dyn Fn() + Send + Sync>)>>,
+    val: T,
+    callbacks: RwLock<Vec<(Condition, Box<dyn Fn() + Send + Sync>)>>,
+}
+
+
+pub struct RingBuffer<T, const N: usize> {
+    buf: [T; N],
+    ptr: usize,
+}
+
+impl<T: Copy + Default, const N: usize> RingBuffer<T, N> {
+    pub fn new() -> RingBuffer<T, N> {
+        RingBuffer {
+            buf: [Default::default(); N],
+            ptr: 0,
+        }
+    }
+
+    pub fn enqueue(&mut self, val: T) {
+        self.buf[self.ptr] = val;
+        self.ptr += 1;
+        if self.ptr == N {
+            self.ptr = 0;
+        }
+    }
+
+    pub fn get_front(&self) -> T {
+        if self.ptr > 0 {
+            self.buf[self.ptr - 1].clone()
+        } else {
+            self.buf[N-1].clone()
+        }
+    }
 }
 
 
@@ -30,6 +61,11 @@ pub trait GetterSetter {
     type InnerType;
     fn set(&self, val: Self::InnerType);
     fn get(&self)-> Self::InnerType;
+}
+
+pub trait ArrayGetter {
+    type InnerType;
+    fn get_array(&self) -> Vec<Self::InnerType>;
 }
 
 
@@ -49,6 +85,7 @@ impl<T: Atomic> GetterSetter for Value<T> {
     fn get(&self) -> Self::InnerType {
         self.val.load(atomic::Ordering::Acquire)
     }
+
 }
 
 
@@ -69,8 +106,36 @@ impl GetterSetter for Value<RwLock<String>> {
     fn get(&self) -> Self::InnerType {
         self.val.read().unwrap().deref().clone()
     }
+
 }
 
+impl<T: Copy + Default, const N: usize> GetterSetter for Value<RwLock<RingBuffer<T, N>>> {
+    type InnerType = T;
+
+    fn set(&self, val: Self::InnerType) {
+        let mut s = self.val.write().unwrap();
+        s.enqueue(val);
+
+        for (condition, callback) in self.callbacks.read().unwrap().deref() {
+            if condition.eval.deref()() == true {
+                callback.deref()();
+            }
+        }
+    }
+
+    fn get(&self) -> Self::InnerType {
+        let x = self.val.read().unwrap();
+        x.get_front()
+    }
+}
+
+impl<T: Copy, const N: usize> ArrayGetter for Value<RwLock<RingBuffer<T, N>>> {
+    type InnerType = T;
+
+    fn get_array(&self) -> Vec<Self::InnerType> {
+        self.val.read().unwrap()
+            .buf.to_vec()    }
+}
 
 impl<T> Value<T> {
     pub const fn new(val: T) -> Value<T> {
