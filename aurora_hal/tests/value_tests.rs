@@ -1,7 +1,7 @@
 use aurora_hal;
 use std::sync::atomic::{AtomicU32, AtomicI16, Ordering};
 use std::sync::RwLock;
-use aurora_hal::GetterSetter;
+use aurora_hal::{ArrayGetter, GetterSetter, RingBuffer, Value};
 
 
 #[test]
@@ -77,4 +77,22 @@ fn callback_in_thread() {
     thread2.join().unwrap();
 
     assert_eq!(x.get(), 100);
+}
+
+
+#[test]
+fn getter_setter_with_history() {
+    static x: Value<RwLock<RingBuffer<i32, 3>>> = aurora_hal::Value::new(RwLock::new(RingBuffer::from([0; 3])));
+    x.set(1);
+    assert_eq!(x.get(), 1);
+    x.set(2);
+    x.set(3);
+
+    let y = x.get_array();
+    assert_eq!(vec![1,2,3], y);
+
+    x.set(4);
+    let z = x.get_array();
+    assert_eq!(vec![2,3,4], z);
+
 }
