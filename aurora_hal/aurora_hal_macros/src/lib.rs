@@ -37,7 +37,8 @@ pub fn add_fields(_args: TokenStream, input: TokenStream) -> TokenStream {
                         .unwrap(),
                 );
             }
-        }
+            _ => (),
+        },
         _ => {
             panic!("Add field has to be called with structs");
         }
