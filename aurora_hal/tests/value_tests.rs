@@ -1,5 +1,5 @@
 use aurora_hal;
-use std::sync::atomic::{AtomicU32, AtomicI16, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicI16};
 use std::sync::RwLock;
 use aurora_hal::{ArrayGetter, GetterSetter, RingBuffer, Value};
 
@@ -35,64 +35,64 @@ fn getter_setter_string_test() {
 
 #[test]
 fn callback_test() {
-    static x: aurora_hal::Value<AtomicU32> = aurora_hal::Value::new(AtomicU32::new(0));
+    static X: aurora_hal::Value<AtomicU32> = aurora_hal::Value::new(AtomicU32::new(0));
     let cb = aurora_hal::Condition{
         eval: Box::new(||{
-            x.get() == 2
+            X.get() == 2
         })
     };
-    x.register_callback(Box::new(||{
-        x.set(100);
+    X.register_callback(Box::new(||{
+        X.set(100);
     }), cb);
 
-    x.set(1);
-    assert_eq!(x.get(), 1);
-    x.set(2);
-    assert_eq!(x.get(), 100);
+    X.set(1);
+    assert_eq!(X.get(), 1);
+    X.set(2);
+    assert_eq!(X.get(), 100);
 }
 
 
 #[test]
 fn callback_in_thread() {
-    static x: aurora_hal::Value<AtomicU32> = aurora_hal::Value::new(AtomicU32::new(0));
+    static X: aurora_hal::Value<AtomicU32> = aurora_hal::Value::new(AtomicU32::new(0));
     let cb = aurora_hal::Condition{
         eval: Box::new(||{
-            x.get() == 2
+            X.get() == 2
         })
     };
-    x.register_callback(Box::new(||{
-        x.set(100);
+    X.register_callback(Box::new(||{
+        X.set(100);
     }), cb);
 
     let thread1 = std::thread::spawn(||{
-        x.set(10);
+        X.set(10);
     });
 
     let thread2 = std::thread::spawn(||{
-        while !(x.get() == 10) {}
-        x.set(2);
+        while !(X.get() == 10) {}
+        X.set(2);
     });
 
     thread1.join().unwrap();
     thread2.join().unwrap();
 
-    assert_eq!(x.get(), 100);
+    assert_eq!(X.get(), 100);
 }
 
 
 #[test]
 fn getter_setter_with_history() {
-    static x: Value<RwLock<RingBuffer<i32, 3>>> = aurora_hal::Value::new(RwLock::new(RingBuffer::from([0; 3])));
-    x.set(1);
-    assert_eq!(x.get(), 1);
-    x.set(2);
-    x.set(3);
+    static X: Value<RwLock<RingBuffer<i32, 3>>> = aurora_hal::Value::new(RwLock::new(RingBuffer::from([0; 3])));
+    X.set(1);
+    assert_eq!(X.get(), 1);
+    X.set(2);
+    X.set(3);
 
-    let y = x.get_array();
+    let y = X.get_array();
     assert_eq!(vec![1,2,3], y);
 
-    x.set(4);
-    let z = x.get_array();
+    X.set(4);
+    let z = X.get_array();
     assert_eq!(vec![2,3,4], z);
 
 }

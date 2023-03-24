@@ -1,3 +1,6 @@
+#![allow(unused_imports)]
+#![allow(non_snake_case)]
+
 extern crate proc_macro;
 
 use proc_macro::TokenStream;

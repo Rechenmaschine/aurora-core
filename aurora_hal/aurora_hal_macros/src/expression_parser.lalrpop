@@ -58,7 +58,7 @@ pub Assignment: String = {
 };
 
 
-pub Logical: String = {
+Logical: String = {
     <l:Logical> "&&" <c:Comparison> => {
         let mut res = String::from(l);
         res.push_str("&&");
@@ -82,7 +82,7 @@ pub Logical: String = {
     Comparison,
 }
 
-pub Comparison: String = {
+Comparison: String = {
     <e:Expr> "==" <f:Expr> => {
         let mut res = String::from(e.as_str());
         res.push_str(" == ");
@@ -131,7 +131,7 @@ pub Comparison: String = {
 
 
 
-pub Expr: String = {
+Expr: String = {
     <l:Expr> "+" <r:Factor> => {
         let mut res = String::from(l);
         res.push_str("+");
@@ -151,7 +151,7 @@ pub Expr: String = {
 };
 
 
-pub Factor: String = {
+Factor: String = {
     <l:Factor> "*" <r:Term> => {
         let mut res = String::from(l);
         res.push_str("*");
@@ -169,7 +169,7 @@ pub Factor: String = {
     Term,
 };
 
-pub Term: String = {
+Term: String = {
     Num,
     <v:Var> => {
         let mut res = String::from(v);
@@ -188,7 +188,7 @@ pub Term: String = {
 
 
 
-pub Var: String = {
+Var: String = {
     "Process" <rest: r"(\.([a-zA-Z0-9])+)+"> => {
         let mut res = String::new();
         res.push_str("self.Process");
@@ -222,7 +222,7 @@ pub Var: String = {
     },
 };
 
-pub Num: String = {
+Num: String = {
     r"[0-9]+" => <>.to_string(),
     r"[0-9]+\.[0-9]+" => <>.to_string(),
     "true" => <>.to_string(),
