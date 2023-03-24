@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 #![allow(unconditional_recursion)]
 #![allow(unused_imports)]
+#![allow(non_snake_case)]
 
 #[macro_use]
 extern crate cfg_if;
@@ -64,23 +65,18 @@ impl<T: Copy, const N: usize> RingBuffer<T, N> {
 }
 
 
-// impl<T: Copy + Default, const N: usize> Default for RingBuffer<T, N> {
-//     fn default() -> Self {
-//         RingBuffer::new()
-//     }
-// }
-
-
 pub trait GetterSetter {
     type InnerType;
     fn set(&self, val: Self::InnerType);
     fn get(&self)-> Self::InnerType;
 }
 
+
 pub trait ArrayGetter {
     type InnerType;
     fn get_array(&self) -> Vec<Self::InnerType>;
 }
+
 
 impl<T: Copy, const N: usize> GetterSetter for Value<RwLock<RingBuffer<T, N>>> {
     type InnerType = T;
@@ -165,6 +161,7 @@ impl<T: Copy, const N: usize> ArrayGetter for Value<RwLock<RingBuffer<T, N>>> {
         res
     }
 }
+
 
 impl<T> Value<T> {
     pub const fn new(val: T) -> Value<T> {
