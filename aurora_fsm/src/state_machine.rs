@@ -10,7 +10,6 @@ impl<E> StateMachine<E> {
     fn step(&mut self) {
         match self.event_queue.recv() {
             Ok(event) => {
-                // Unwrap safety: Unwrap is safe as self.current_state is only None _during_ a state transition
                 if let Some(mut next_state) = self.current_state.handle_event(event) {
                     self.current_state.destroy_event_sources();
                     self.event_queue = next_state.create_event_sources();
