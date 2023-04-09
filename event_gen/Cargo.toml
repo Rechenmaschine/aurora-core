@@ -1,7 +1,8 @@
 [package]
-name = "aurora_hal"
+name = "event_gen"
 version = "0.1.0"
-edition = "2021"
+authors = ["Klark007 <jan.grunder@yahoo.de>"]
+edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -11,3 +12,4 @@ atomic_float = "0.1.0"
 #atomic-traits = "0.3.0"
 cfg-if = "1.0.0"
 lazy_static = "1.4.0"
+
