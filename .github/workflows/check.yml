@@ -43,6 +43,7 @@ jobs:
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          args: -- -Wclippy::cargo -Wclippy::predantic -Winteger_division -Drc_buffer -Drc_mutex
   doc:
     runs-on: ubuntu-latest
     name: nightly / doc
