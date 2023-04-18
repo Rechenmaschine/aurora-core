@@ -1,6 +1,8 @@
 # aurora-core
 
+[![codecov](https://codecov.io/gh/aris-space/aurora-core/branch/main/graph/badge.svg?token=GML428JLHJ)](https://codecov.io/gh/aris-space/aurora-core)
+[![Dependency Status](https://deps.rs/repo/github/aris-space/aurora-core/status.svg)](https://deps.rs/repo/github/aris-space/aurora-core)
+
 This repo contains all code that runs on the main Aurora flight computer.
 
-If you are running in an Unix environment (Linux/macOS/WSL), please run `setup.sh` to install any required tools and set up
-Git hooks that ensure proper code standards.
+Before committing code to this repository please install [pre-commit](https://pre-commit.com/) and run `pre-commit install` in this repository.
