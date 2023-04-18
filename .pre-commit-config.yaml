@@ -25,5 +25,5 @@ repos:
     -   id: fmt
     -   id: cargo-check
     -   id: clippy
-        args: ["--", "-Wclippy::cargo", "-Wclippy::pedantic", "-Winteger_division", "-Drc_buffer", "-Drc_mutex"]
+        args: ["--", "-Wclippy::cargo", "-Wclippy::pedantic", "-Wclippy::integer_division", "-Dclippy::rc_buffer", "-Dclippy::rc_mutex"]
         verbose: true
