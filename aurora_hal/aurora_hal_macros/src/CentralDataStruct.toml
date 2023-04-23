@@ -13,7 +13,7 @@
 
 
 [Control]
-state = "String"
+state = "str"
     [Control.Actuator1]
     x = "f32"
     y = "i32"

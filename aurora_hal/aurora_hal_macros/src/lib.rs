@@ -83,7 +83,7 @@ fn build_struct(key: &str, value: &Value) -> (Option<String>, Option<String>) {
                     return (Some(struct_def), None);
                 }
 
-                "String" | "string" => {
+                "str" => {
                     struct_def.push_str(&format!("{}: Value<std::sync::RwLock<String>>,\n", key));
                     return (Some(struct_def), None);
                 }
