@@ -1,22 +1,23 @@
 use crate::event_generator::EventGenerator;
 
 use std::sync::mpsc::Sender;
+use std::marker::Send;
 use std::thread;
 use std::time::{Duration, Instant};
 
-pub struct TickGenerator {
-    pub min_duration: Duration
+pub struct TickGenerator<T: Send> {
+    pub min_duration: Duration,
+    pub event_producer: fn(Instant, Instant) -> T
 }
 
-impl EventGenerator<Duration,()> for TickGenerator {
+impl<T: 'static + Send> EventGenerator<T,()> for TickGenerator {
     fn start(self, send_handle: Sender<Duration>) -> thread::JoinHandle<()> {
         thread::spawn(move|| {
             let mut last_time = Instant::now();
             loop {
-                if last_time.elapsed() >= self.min_duration {
-                    send_handle.send(last_time.elapsed()).unwrap();
-                    last_time = Instant::now();
-                }
+                send_handle.send((self.event_producer)(Instant::now(), last_time)).unwrap();
+                last_time = Instant::now();
+                thread::sleep(self.min_duration)
             }
         })
     }

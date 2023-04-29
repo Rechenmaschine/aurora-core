@@ -1,9 +1,10 @@
 use crate::event_generator::EventGenerator;
 
 use std::sync::mpsc::Sender;
+use std::marker::Send;
 use std::thread;
 
-pub struct OneShotGenerator<T: std::marker::Send> {
+pub struct OneShotGenerator<T: Send> {
     pub value: T,
 }
 
