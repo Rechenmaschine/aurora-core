@@ -6,7 +6,6 @@ extern crate proc_macro;
 use proc_macro::{TokenStream};
 use syn::{parse_macro_input, DeriveInput, parse::Parser, parse::ParseStream, parse::Parse, Result, };
 use quote::quote;
-use syn::{parse::Parser, parse_macro_input, DeriveInput};
 use toml::Value;
 use std::sync::{atomic, RwLock};
 use atomic_float::{AtomicF32, AtomicF64};
