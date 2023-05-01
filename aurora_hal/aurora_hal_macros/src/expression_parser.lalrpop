@@ -189,9 +189,9 @@ Term: String = {
 
 
 Var: String = {
-    "Process" <rest: r"(\.([a-zA-Z0-9])+)+"> => {
+    "process" <rest: r"(\.([a-zA-Z0-9])+)+"> => {
         let mut res = String::new();
-        res.push_str("self.Process");
+        res.push_str("IOTREE.process");
         let mut mem = rest.split(".").peekable();
         mem.next();
         while let Some(m) = mem.next() {
@@ -205,9 +205,9 @@ Var: String = {
         res
     },
 
-    "Control" <rest: r"(\.([a-zA-Z0-9])+)+"> => {
+    "control" <rest: r"(\.([a-zA-Z0-9])+)+"> => {
         let mut res = String::new();
-        res.push_str("self.Control");
+        res.push_str("IOTREE.control");
         let mut mem = rest.split(".").peekable();
         mem.next();
         while let Some(m) = mem.next() {

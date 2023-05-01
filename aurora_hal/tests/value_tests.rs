@@ -1,19 +1,21 @@
 use aurora_hal;
 use std::sync::atomic::{AtomicU32, AtomicI16};
+use std::sync::atomic::Ordering::Release;
 use std::sync::RwLock;
-use aurora_hal::{ArrayGetter, GetterSetter, RingBuffer, Value};
+use aurora_hal::{ArrayGetter, CALLBACKS, GetterSetter, RingBuffer, set};
+use std::ops::Deref;
 
 
 #[test]
 fn getter_setter_atomic_test() {
-    let x: aurora_hal::Value<AtomicU32> = aurora_hal::Value::new(AtomicU32::new(0));
+    let x: AtomicU32 = AtomicU32::new(0);
     assert_eq!(x.get(), 0);
     x.set(5);
     assert_eq!(x.get(), 5);
     x.set(10);
     assert_eq!(x.get(), 10);
 
-    let y: aurora_hal::Value<AtomicI16> = aurora_hal::Value::new(AtomicI16::new(0));
+    let y: AtomicI16 = AtomicI16::new(0);
     assert_eq!(y.get(), 0);
     y.set(5);
     assert_eq!(y.get(), 5);
@@ -24,7 +26,7 @@ fn getter_setter_atomic_test() {
 
 #[test]
 fn getter_setter_string_test() {
-    let x: aurora_hal::Value<RwLock<String>> = aurora_hal::Value::new(RwLock::new("test1".to_string()));
+    let x: RwLock<String> = RwLock::new("test1".to_string());
     assert_eq!(x.get(), "test1");
     x.set("test2".to_string());
     assert_eq!(x.get(), "test2");
@@ -34,55 +36,43 @@ fn getter_setter_string_test() {
 
 
 #[test]
-fn callback_test() {
-    static X: aurora_hal::Value<AtomicU32> = aurora_hal::Value::new(AtomicU32::new(0));
-    let cb = aurora_hal::Condition{
-        eval: Box::new(||{
-            X.get() == 2
-        })
-    };
-    X.register_callback(Box::new(||{
-        X.set(100);
-    }), cb);
+fn set_macro_test() {
+    static X: AtomicU32 = AtomicU32::new(0);
 
-    X.set(1);
+    set!(X, 1);
     assert_eq!(X.get(), 1);
-    X.set(2);
-    assert_eq!(X.get(), 100);
+}
+
+#[test]
+fn callback_test() {
+    static Y: AtomicU32 = AtomicU32::new(0);
+    let mut v: Vec<(Box<dyn Fn() -> bool + Send + Sync>, Box<dyn Fn() + Send + Sync>)> = Vec::new();
+    v.push((Box::new(||{true}), Box::new(||{ Y.store(5, Release); })));
+    CALLBACKS.lock().unwrap().insert("Y".to_string(), v);
+
+    set!(Y, 1);
+    assert_eq!(Y.get(), 5);
 }
 
 
 #[test]
 fn callback_in_thread() {
-    static X: aurora_hal::Value<AtomicU32> = aurora_hal::Value::new(AtomicU32::new(0));
-    let cb = aurora_hal::Condition{
-        eval: Box::new(||{
-            X.get() == 2
-        })
-    };
-    X.register_callback(Box::new(||{
-        X.set(100);
-    }), cb);
+    static Z: AtomicU32 = AtomicU32::new(0);
+    {
+        let mut v: Vec<(Box<dyn Fn() -> bool + Send + Sync>, Box<dyn Fn() + Send + Sync>)> = Vec::new();
+        v.push((Box::new(|| { true }), Box::new(|| { Z.store(5, Release); })));
+        CALLBACKS.lock().unwrap().insert("Z".to_string(), v);
+    }
 
-    let thread1 = std::thread::spawn(||{
-        X.set(10);
-    });
-
-    let thread2 = std::thread::spawn(||{
-        while !(X.get() == 10) {}
-        X.set(2);
-    });
-
+    let thread1 = std::thread::spawn(||{ set!(Z, 1); });
     thread1.join().unwrap();
-    thread2.join().unwrap();
-
-    assert_eq!(X.get(), 100);
+    assert_eq!(Z.get(), 5);
 }
 
 
 #[test]
 fn getter_setter_with_history() {
-    static X: Value<RwLock<RingBuffer<i32, 3>>> = aurora_hal::Value::new(RwLock::new(RingBuffer::from([0; 3])));
+    static X: RwLock<RingBuffer<i32, 3>> = RwLock::new(RingBuffer::new([0; 3]));
     X.set(1);
     assert_eq!(X.get(), 1);
     X.set(2);
@@ -94,5 +84,12 @@ fn getter_setter_with_history() {
     X.set(4);
     let z = X.get_array();
     assert_eq!(vec![2,3,4], z);
+}
 
+
+#[test]
+fn callback_static() {
+    let mut v: Vec<(Box<dyn Fn() -> bool + Send + Sync>, Box<dyn Fn() + Send + Sync>)> = Vec::new();
+    v.push((Box::new(|| true), Box::new(||{println!("Test succeeded!")})));
+    CALLBACKS.lock().unwrap().insert("test".to_string(), v);
 }

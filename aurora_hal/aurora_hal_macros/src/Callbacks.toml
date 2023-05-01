@@ -1,4 +1,4 @@
 [1]
-var = "Process.Sensor1.pressure"
-condition = "Process.Sensor1.pressure > 5"
-callback = "Process.Sensor1.pressure = 5"
+var = "process.Sensor1.pressure"
+condition = "process.Sensor1.pressure > 5"
+callback = "process.Sensor1.pressure = 5"

@@ -5,26 +5,22 @@
 
 #[macro_use]
 extern crate cfg_if;
+
+#[macro_use]
+extern crate lazy_static;
+
 mod atomic_traits;
 
 use std::ops::Deref;
 use std::sync::{atomic, RwLock};
-use aurora_hal_macros::{add_fields, Callbacks};
+use aurora_hal_macros::{add_fields, derive_callbacks, Init};
 use atomic::{AtomicI64, AtomicU64, AtomicI32, AtomicU32, AtomicI16, AtomicU16, AtomicBool};
 use atomic_float::{AtomicF32, AtomicF64};
 use atomic_traits::{Atomic};
 use std::sync::Arc;
-
-
-pub struct Condition {
-    pub eval: Box<dyn Fn() -> bool + Send + Sync>,
-}
-
-
-pub struct Value<T> {
-    val: T,
-    callbacks: RwLock<Vec<(Condition, Box<dyn Fn() + Send + Sync>)>>,
-}
+use std::sync::Mutex;
+use std::collections::HashMap;
+use std::string::ToString;
 
 
 pub struct RingBuffer<T, const N: usize> {
@@ -33,14 +29,7 @@ pub struct RingBuffer<T, const N: usize> {
 }
 
 impl<T: Copy, const N: usize> RingBuffer<T, N> {
-    // pub const fn new() -> RingBuffer<T, N> {
-    //     RingBuffer {
-    //         buf: [ConstDefault::default(); N],
-    //         ptr: 0,
-    //     }
-    // }
-
-    pub const fn from(val: [T; N]) -> RingBuffer<T, N> {
+    pub const fn new(val: [T; N]) -> RingBuffer<T, N> {
         RingBuffer {
             buf: val,
             ptr: 0,
@@ -64,87 +53,66 @@ impl<T: Copy, const N: usize> RingBuffer<T, N> {
     }
 }
 
-
+// This trait allows setting and getting values from the IoTree struct. All allowed types in the IoTree implement this trait.
+// Retrieving information from the tree is done directly by using the get() function in this trait.
+// To store a value in the IoTree, use the set! macro (defined at the bottom of this file). The set! macro also executes any callbacks associated with the value to be set
 pub trait GetterSetter {
     type InnerType;
     fn set(&self, val: Self::InnerType);
     fn get(&self)-> Self::InnerType;
 }
 
+impl<T: Atomic> GetterSetter for T {
+    type InnerType = <T as Atomic>::Type;
+    fn set(&self, val: Self::InnerType) {
+        self.store(val, atomic::Ordering::Release);
+    }
 
+    fn get(&self) -> Self::InnerType {
+        self.load(atomic::Ordering::Acquire)
+    }
+}
+
+
+impl GetterSetter for RwLock<String> {
+    type InnerType = String;
+
+    fn set(&self, val: Self::InnerType) {
+        let mut x = self.write().unwrap();
+        *x = val;
+    }
+
+    fn get(&self) -> Self::InnerType {
+        self.read().unwrap().deref().clone()
+    }
+}
+
+impl<T: Clone + Copy, const N: usize> GetterSetter for RwLock<RingBuffer<T, N>> {
+    type InnerType = T;
+
+    fn set(&self, val: Self::InnerType) {
+        let mut x = self.write().unwrap();
+        x.enqueue(val);
+    }
+
+    fn get(&self) -> Self::InnerType {
+        let x = self.read().unwrap();
+        x.get_front()
+    }
+}
+
+// This Trait is used to return the contents of an entire RingBuffer. If required, an additional function can be implemented here to retrieve specific parts of the buffer
 pub trait ArrayGetter {
     type InnerType;
     fn get_array(&self) -> Vec<Self::InnerType>;
 }
 
 
-impl<T: Copy, const N: usize> GetterSetter for Value<RwLock<RingBuffer<T, N>>> {
-    type InnerType = T;
-
-    fn set(&self, val: Self::InnerType) {
-        let mut s = self.val.write().unwrap();
-        s.enqueue(val);
-
-        for (condition, callback) in self.callbacks.read().unwrap().deref() {
-            if condition.eval.deref()() == true {
-                callback.deref()();
-            }
-        }
-    }
-
-    fn get(&self) -> Self::InnerType {
-        let x = self.val.read().unwrap();
-        x.get_front()
-    }
-}
-
-impl<T: Atomic> GetterSetter for Value<T> {
-    type InnerType = <T as Atomic>::Type;
-
-    fn set(&self, val: Self::InnerType) {
-        self.val.store(val, atomic::Ordering::Release);
-
-        for (ref condition, callback) in self.callbacks.read().unwrap().deref() {
-            if condition.eval.deref()() == true {
-                callback.deref()();
-            }
-        }
-    }
-
-    fn get(&self) -> Self::InnerType {
-        self.val.load(atomic::Ordering::Acquire)
-    }
-
-}
-
-
-impl GetterSetter for Value<RwLock<String>> {
-    type InnerType = String;
-
-    fn set(&self, val: Self::InnerType) {
-        let mut s = self.val.write().unwrap();
-        *s = val;
-
-        for (condition, callback) in self.callbacks.read().unwrap().deref() {
-            if condition.eval.deref()() == true {
-                callback.deref()();
-            }
-        }
-    }
-
-    fn get(&self) -> Self::InnerType {
-        self.val.read().unwrap().deref().clone()
-    }
-
-}
-
-
-
-impl<T: Copy, const N: usize> ArrayGetter for Value<RwLock<RingBuffer<T, N>>> {
+impl<T: Copy, const N: usize> ArrayGetter for RwLock<RingBuffer<T, N>> {
     type InnerType = T;
 
     fn get_array(&self) -> Vec<Self::InnerType> {
-        let x = self.val.read().unwrap();
+        let x = self.read().unwrap();
         let mut ptr = x.ptr;
         let mut res: Vec<Self::InnerType> = Vec::new();
         res.reserve(N);
@@ -163,24 +131,44 @@ impl<T: Copy, const N: usize> ArrayGetter for Value<RwLock<RingBuffer<T, N>>> {
 }
 
 
-impl<T> Value<T> {
-    pub const fn new(val: T) -> Value<T> {
-        let x: Vec<(Condition, Box<dyn Fn() + Send + Sync>)> = Vec::new();
-        Value {
-            val,
-            callbacks: RwLock::new(x),
-        }
-    }
 
-    pub fn register_callback(&self, callback: Box<dyn Fn() + Send + Sync>, condition: Condition) {
-        self.callbacks.write()
-            .unwrap()
-            .push((condition, callback));
-    }
+
+// These Structs are global. Callback chains are stored in the CALLBACKS struct, and the IOTREE struct is the data center for all data used during flight
+
+// Three macros are associated with the IoTree.
+// add_fields parses the IoTree.toml file and builds the nested structure of the IoTree struct.
+// derive(Init) derives an initialization function for the IoTree struct
+#[add_fields]
+#[derive(Init)]
+pub struct IoTree {}
+
+lazy_static! {
+    pub static ref CALLBACKS: Mutex<HashMap<String, Vec<(Box<dyn Fn() -> bool + Send + Sync>, Box<dyn Fn() + Send + Sync>)>>> = {
+        let v: Vec<(Box<dyn Fn() -> bool + Send + Sync>, Box<dyn Fn() + Send + Sync>)> = Vec::new();
+        let m = Mutex::new(HashMap::from([("empty".to_string(), v)]));
+        m
+    };
 }
 
+lazy_static! {
+    pub static ref IOTREE: IoTree = IoTree::new();
+}
 
+// Generate the init_callbacks function, which adds all callbacks defined in the Callbacks.toml file to the CALLBACKS HashMap
+derive_callbacks!();
 
-#[add_fields]
-#[derive(Callbacks)]
-struct CentralDataStruct {}
+// ============================ MACROS ==========================================================
+
+#[macro_export]
+macro_rules! set {
+    ( $path:expr, $val:expr ) => {
+        $path.set($val);
+        if CALLBACKS.lock().unwrap().deref().contains_key(stringify!($path)) {
+            for cb in CALLBACKS.lock().unwrap().get(stringify!($path)).unwrap() {
+                if cb.0.deref()() == true {
+                    cb.1.deref()();
+                }
+            }
+        }
+    }
+}
