@@ -1,10 +1,9 @@
 use aurora_hal;
-use std::sync::atomic::{AtomicU32, AtomicI16};
-use std::sync::atomic::Ordering::Release;
-use std::sync::RwLock;
-use aurora_hal::{ArrayGetter, CALLBACKS, GetterSetter, RingBuffer, set};
+use aurora_hal::{set, ArrayGetter, GetterSetter, RingBuffer, CALLBACKS};
 use std::ops::Deref;
-
+use std::sync::atomic::Ordering::Release;
+use std::sync::atomic::{AtomicI16, AtomicU32};
+use std::sync::RwLock;
 
 #[test]
 fn getter_setter_atomic_test() {
@@ -23,7 +22,6 @@ fn getter_setter_atomic_test() {
     assert_eq!(y.get(), 10);
 }
 
-
 #[test]
 fn getter_setter_string_test() {
     let x: RwLock<String> = RwLock::new("test1".to_string());
@@ -33,7 +31,6 @@ fn getter_setter_string_test() {
     x.set("test3".to_string());
     assert_eq!(x.get(), "test3");
 }
-
 
 #[test]
 fn set_macro_test() {
@@ -46,29 +43,45 @@ fn set_macro_test() {
 #[test]
 fn callback_test() {
     static Y: AtomicU32 = AtomicU32::new(0);
-    let mut v: Vec<(Box<dyn Fn() -> bool + Send + Sync>, Box<dyn Fn() + Send + Sync>)> = Vec::new();
-    v.push((Box::new(||{true}), Box::new(||{ Y.store(5, Release); })));
+    let mut v: Vec<(
+        Box<dyn Fn() -> bool + Send + Sync>,
+        Box<dyn Fn() + Send + Sync>,
+    )> = Vec::new();
+    v.push((
+        Box::new(|| true),
+        Box::new(|| {
+            Y.store(5, Release);
+        }),
+    ));
     CALLBACKS.lock().unwrap().insert("Y".to_string(), v);
 
     set!(Y, 1);
     assert_eq!(Y.get(), 5);
 }
 
-
 #[test]
 fn callback_in_thread() {
     static Z: AtomicU32 = AtomicU32::new(0);
     {
-        let mut v: Vec<(Box<dyn Fn() -> bool + Send + Sync>, Box<dyn Fn() + Send + Sync>)> = Vec::new();
-        v.push((Box::new(|| { true }), Box::new(|| { Z.store(5, Release); })));
+        let mut v: Vec<(
+            Box<dyn Fn() -> bool + Send + Sync>,
+            Box<dyn Fn() + Send + Sync>,
+        )> = Vec::new();
+        v.push((
+            Box::new(|| true),
+            Box::new(|| {
+                Z.store(5, Release);
+            }),
+        ));
         CALLBACKS.lock().unwrap().insert("Z".to_string(), v);
     }
 
-    let thread1 = std::thread::spawn(||{ set!(Z, 1); });
+    let thread1 = std::thread::spawn(|| {
+        set!(Z, 1);
+    });
     thread1.join().unwrap();
     assert_eq!(Z.get(), 5);
 }
-
 
 #[test]
 fn getter_setter_with_history() {
@@ -79,17 +92,19 @@ fn getter_setter_with_history() {
     X.set(3);
 
     let y = X.get_array();
-    assert_eq!(vec![1,2,3], y);
+    assert_eq!(vec![1, 2, 3], y);
 
     X.set(4);
     let z = X.get_array();
-    assert_eq!(vec![2,3,4], z);
+    assert_eq!(vec![2, 3, 4], z);
 }
-
 
 #[test]
 fn callback_static() {
-    let mut v: Vec<(Box<dyn Fn() -> bool + Send + Sync>, Box<dyn Fn() + Send + Sync>)> = Vec::new();
-    v.push((Box::new(|| true), Box::new(||{println!("Test succeeded!")})));
+    let mut v: Vec<(
+        Box<dyn Fn() -> bool + Send + Sync>,
+        Box<dyn Fn() + Send + Sync>,
+    )> = Vec::new();
+    v.push((Box::new(|| true), Box::new(|| println!("Test succeeded!"))));
     CALLBACKS.lock().unwrap().insert("test".to_string(), v);
 }

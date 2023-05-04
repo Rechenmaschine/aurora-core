@@ -1,8 +1,3 @@
-#![allow(dead_code)]
-#![allow(unconditional_recursion)]
-#![allow(unused_imports)]
-#![allow(non_snake_case)]
-
 #[macro_use]
 extern crate cfg_if;
 
@@ -11,29 +6,27 @@ extern crate lazy_static;
 
 mod atomic_traits;
 
-use std::ops::Deref;
-use std::sync::{atomic, RwLock};
-use aurora_hal_macros::{add_fields, derive_callbacks, Init};
-use atomic::{AtomicI64, AtomicU64, AtomicI32, AtomicU32, AtomicI16, AtomicU16, AtomicBool};
+use atomic::{AtomicBool, AtomicI16, AtomicI32, AtomicI64, AtomicU16, AtomicU32, AtomicU64};
 use atomic_float::{AtomicF32, AtomicF64};
-use atomic_traits::{Atomic};
-use std::sync::Arc;
-use std::sync::Mutex;
+use atomic_traits::Atomic;
+use aurora_hal_macros::{add_fields, derive_callbacks, Init};
 use std::collections::HashMap;
+use std::ops::Deref;
 use std::string::ToString;
+use std::sync::Mutex;
+use std::sync::{atomic, RwLock};
 
+type Callback = Box<dyn Fn() + Send + Sync>;
+type Condition = Box<dyn Fn() -> bool + Send + Sync>;
 
 pub struct RingBuffer<T, const N: usize> {
     buf: [T; N],
     ptr: usize,
 }
 
-impl<T: Copy, const N: usize> RingBuffer<T, N> {
+impl<T: Clone, const N: usize> RingBuffer<T, N> {
     pub const fn new(val: [T; N]) -> RingBuffer<T, N> {
-        RingBuffer {
-            buf: val,
-            ptr: 0,
-        }
+        RingBuffer { buf: val, ptr: 0 }
     }
 
     fn enqueue(&mut self, val: T) {
@@ -48,7 +41,7 @@ impl<T: Copy, const N: usize> RingBuffer<T, N> {
         if self.ptr > 0 {
             self.buf[self.ptr - 1].clone()
         } else {
-            self.buf[N-1].clone()
+            self.buf[N - 1].clone()
         }
     }
 }
@@ -59,7 +52,7 @@ impl<T: Copy, const N: usize> RingBuffer<T, N> {
 pub trait GetterSetter {
     type InnerType;
     fn set(&self, val: Self::InnerType);
-    fn get(&self)-> Self::InnerType;
+    fn get(&self) -> Self::InnerType;
 }
 
 impl<T: Atomic> GetterSetter for T {
@@ -72,7 +65,6 @@ impl<T: Atomic> GetterSetter for T {
         self.load(atomic::Ordering::Acquire)
     }
 }
-
 
 impl GetterSetter for RwLock<String> {
     type InnerType = String;
@@ -107,7 +99,6 @@ pub trait ArrayGetter {
     fn get_array(&self) -> Vec<Self::InnerType>;
 }
 
-
 impl<T: Copy, const N: usize> ArrayGetter for RwLock<RingBuffer<T, N>> {
     type InnerType = T;
 
@@ -122,16 +113,13 @@ impl<T: Copy, const N: usize> ArrayGetter for RwLock<RingBuffer<T, N>> {
             res.push(x.buf[ptr]);
             ptr += 1;
             if ptr == N {
-                ptr = 0
+                ptr = 0;
             }
             counter += 1;
         }
         res
     }
 }
-
-
-
 
 // These Structs are global. Callback chains are stored in the CALLBACKS struct, and the IOTREE struct is the data center for all data used during flight
 
@@ -143,10 +131,9 @@ impl<T: Copy, const N: usize> ArrayGetter for RwLock<RingBuffer<T, N>> {
 pub struct IoTree {}
 
 lazy_static! {
-    pub static ref CALLBACKS: Mutex<HashMap<String, Vec<(Box<dyn Fn() -> bool + Send + Sync>, Box<dyn Fn() + Send + Sync>)>>> = {
-        let v: Vec<(Box<dyn Fn() -> bool + Send + Sync>, Box<dyn Fn() + Send + Sync>)> = Vec::new();
-        let m = Mutex::new(HashMap::from([("empty".to_string(), v)]));
-        m
+    pub static ref CALLBACKS: Mutex<HashMap<String, Vec<(Condition, Callback)>>> = {
+        let v: Vec<(Condition, Callback)> = Vec::new();
+        Mutex::new(HashMap::from([("empty".to_string(), v)]))
     };
 }
 
@@ -163,12 +150,17 @@ derive_callbacks!();
 macro_rules! set {
     ( $path:expr, $val:expr ) => {
         $path.set($val);
-        if CALLBACKS.lock().unwrap().deref().contains_key(stringify!($path)) {
+        if CALLBACKS
+            .lock()
+            .unwrap()
+            .deref()
+            .contains_key(stringify!($path))
+        {
             for cb in CALLBACKS.lock().unwrap().get(stringify!($path)).unwrap() {
                 if cb.0.deref()() == true {
                     cb.1.deref()();
                 }
             }
         }
-    }
+    };
 }

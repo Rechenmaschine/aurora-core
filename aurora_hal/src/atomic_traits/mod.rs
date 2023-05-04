@@ -46,8 +46,11 @@
 // ```
 #![deny(missing_docs)]
 
-use std::sync::atomic::*;
 use atomic_float::*;
+use std::sync::atomic::{
+    AtomicBool, AtomicI16, AtomicI32, AtomicI64, AtomicI8, AtomicIsize, AtomicPtr, AtomicU16,
+    AtomicU32, AtomicU64, AtomicU8, AtomicUsize, Ordering,
+};
 
 pub mod fetch;
 
@@ -75,7 +78,6 @@ pub trait Atomic {
 
     /// Stores a value into the atomic type, returning the previous value.
     fn swap(&self, val: Self::Type, order: Ordering) -> Self::Type;
-
 
     /// Stores a value into the atomic type if the current value is the same as the `current` value.
     ///
@@ -356,7 +358,10 @@ impl_atomic!(AtomicF32: f32; bitwise, numops);
 
 //#[cfg(any(feature = "integer_atomics", feature = "since_1_34_0"))]
 mod integer_atomics {
-    use super::*;
+    use super::{
+        Atomic, AtomicI16, AtomicI32, AtomicI64, AtomicI8, AtomicU16, AtomicU32, AtomicU64,
+        AtomicU8, Bitwise, NumOps, Ordering,
+    };
 
     impl_atomic!(AtomicI8: i8; bitwise, numops);
     impl_atomic!(AtomicI16: i16; bitwise, numops);
