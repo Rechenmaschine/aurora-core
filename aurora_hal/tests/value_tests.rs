@@ -85,6 +85,8 @@ fn callback_in_thread() {
 
 #[test]
 fn getter_setter_with_history() {
+    let ring = RingBuffer::new([2; 3]);
+    assert_eq!(ring.get_front(), 2);
     static X: RwLock<RingBuffer<i32, 3>> = RwLock::new(RingBuffer::new([0; 3]));
     assert_eq!(vec![0, 0, 0], X.get_array());
     X.set(1);

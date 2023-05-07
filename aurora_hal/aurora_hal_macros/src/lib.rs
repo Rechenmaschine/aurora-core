@@ -163,7 +163,7 @@ pub fn derive_callbacks(_input: TokenStream) -> TokenStream {
 
     match toml {
         Value::Table(table) => {
-            for (_callback_name, v) in &table {
+            for v in table.values() {
                 if let Value::Table(callback_def) = v {
                     let mut owning_variable = String::new();
                     let mut condition = String::new();
@@ -280,65 +280,7 @@ pub fn derive_init_fn(input: TokenStream) -> TokenStream {
                     path.push_str(seg.ident.to_string().as_str());
                     if seg.ident == *"RwLock" {
                         path.push_str("::new(");
-
-                        if let syn::PathArguments::AngleBracketed(brackets) = &seg.arguments {
-                            for arg in brackets.args.iter() {
-                                if let syn::GenericArgument::Type(syn::Type::Path(rwlock_args)) =
-                                    arg
-                                {
-                                    for type_in_rwlock in rwlock_args.path.segments.iter() {
-                                        path.push_str(type_in_rwlock.ident.to_string().as_str());
-
-                                        if type_in_rwlock.ident == "RingBuffer" {
-                                            path.push_str("::new(");
-                                            match &type_in_rwlock.arguments {
-                                                syn::PathArguments::AngleBracketed(ringbuf_configs) => {
-                                                    let mut buffer_length: u32 = 0;
-                                                    let mut buffer_type = String::new();
-                                                    for ringbuf_config in ringbuf_configs.args.iter() {
-                                                        match ringbuf_config {
-                                                            // Find type contained in RingBuffer
-                                                            syn::GenericArgument::Type(syn::Type::Path(ringbuffer_args)) => {
-                                                                for ringbuffer_type in ringbuffer_args.path.segments.iter() {
-                                                                    buffer_type.push_str(ringbuffer_type.ident.to_string().as_str());
-                                                                }
-                                                            }
-                                                            // Find length of RingBuffer
-                                                            syn::GenericArgument::Const(syn::Expr::Lit(syn::ExprLit{ attrs: _, lit})) => {
-                                                                match lit {
-                                                                    syn::Lit::Int(buffer_length_syn) => {
-                                                                        match buffer_length_syn.base10_parse::<u32>() {
-                                                                            Ok(l) => buffer_length = l,
-                                                                            _ => panic!("RingBuffer length parsing failed"),
-                                                                        }
-                                                                    },
-                                                                    _ => panic!("RingBuffer length is not an integer value"),
-                                                                }
-
-                                                            }
-                                                            _ => panic!("The arguments in AngleBracketed of the RingBuffer contain something aside from Type and Size")
-                                                        }
-                                                    }
-                                                    // Build an array to initialize the RingBuffer with, e.g.: [0, 0, 0, ...], values in the array depend
-                                                    // on the type in the RingBuffer
-                                                    path.push('[');
-                                                    for _i in 0..buffer_length {
-                                                        path.push_str(format!("{}, ", initialize_type(&buffer_type)).as_str());
-                                                    }
-                                                    path.push(']');
-                                                }
-                                                _ => panic!("The arguments in the RingBuffer struct contain something aside from syn::PathArguments::AngleBracketed")
-                                            }
-                                            path.push(')');
-                                        } else {
-                                            // The value in the RwLock is a String or something else with a simple new() function
-                                            path.push_str("::new()");
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
+                        path.push_str(get_type_in_rwlock(seg).as_str());
                         // Close the RwLock::new() function
                         path.push(')');
                     }
@@ -368,6 +310,73 @@ pub fn derive_init_fn(input: TokenStream) -> TokenStream {
         }
     }
     .into()
+}
+
+fn get_type_in_rwlock(rwlock: &syn::PathSegment) -> String {
+    let mut inner_type_initialization = String::new();
+    if let syn::PathArguments::AngleBracketed(brackets) = &rwlock.arguments {
+        for arg in brackets.args.iter() {
+            if let syn::GenericArgument::Type(syn::Type::Path(rwlock_args)) = arg {
+                for type_in_rwlock in rwlock_args.path.segments.iter() {
+                    inner_type_initialization.push_str(type_in_rwlock.ident.to_string().as_str());
+
+                    if type_in_rwlock.ident == "RingBuffer" {
+                        inner_type_initialization.push_str("::new(");
+                        inner_type_initialization
+                            .push_str(build_buffer_to_initialize(type_in_rwlock).as_str());
+                        inner_type_initialization.push(')');
+                    } else {
+                        // The value in the RwLock is a String or something else with a simple new() function
+                        inner_type_initialization.push_str("::new()");
+                    }
+                }
+            }
+        }
+    }
+    inner_type_initialization
+}
+
+fn build_buffer_to_initialize(ringbuffer: &syn::PathSegment) -> String {
+    let mut buffer_to_initialize = String::new();
+    match &ringbuffer.arguments {
+        syn::PathArguments::AngleBracketed(ringbuf_configs) => {
+            let mut buffer_length: u32 = 0;
+            let mut buffer_type = String::new();
+            for ringbuf_config in ringbuf_configs.args.iter() {
+                match ringbuf_config {
+                    // Find type contained in RingBuffer
+                    syn::GenericArgument::Type(syn::Type::Path(ringbuffer_args)) => {
+                        for ringbuffer_type in ringbuffer_args.path.segments.iter() {
+                            buffer_type.push_str(ringbuffer_type.ident.to_string().as_str());
+                        }
+                    }
+                    // Find length of RingBuffer
+                    syn::GenericArgument::Const(syn::Expr::Lit(syn::ExprLit{ attrs: _, lit})) => {
+                        match lit {
+                            syn::Lit::Int(buffer_length_syn) => {
+                                match buffer_length_syn.base10_parse::<u32>() {
+                                    Ok(l) => buffer_length = l,
+                                    _ => panic!("RingBuffer length parsing failed"),
+                                }
+                            },
+                            _ => panic!("RingBuffer length is not an integer value"),
+                        }
+
+                    }
+                    _ => panic!("The arguments in AngleBracketed of the RingBuffer contain something aside from Type and Size")
+                }
+            }
+            // Build an array to initialize the RingBuffer with, e.g.: [0, 0, 0, ...], values in the array depend
+            // on the type in the RingBuffer
+            buffer_to_initialize.push('[');
+            for _i in 0..buffer_length {
+                buffer_to_initialize.push_str(format!("{}, ", initialize_type(&buffer_type)).as_str());
+            }
+            buffer_to_initialize.push(']');
+        }
+        _ => panic!("The arguments in the RingBuffer struct contain something aside from syn::PathArguments::AngleBracketed")
+    }
+    buffer_to_initialize
 }
 
 fn add_new_function(field_name: &str, field_type: &str) -> String {

@@ -29,7 +29,7 @@ impl<T: Clone, const N: usize> RingBuffer<T, N> {
         RingBuffer { buf: val, ptr: 0 }
     }
 
-    fn enqueue(&mut self, val: T) {
+    pub fn enqueue(&mut self, val: T) {
         self.buf[self.ptr] = val;
         self.ptr += 1;
         if self.ptr == N {
@@ -37,7 +37,7 @@ impl<T: Clone, const N: usize> RingBuffer<T, N> {
         }
     }
 
-    fn get_front(&self) -> T {
+    pub fn get_front(&self) -> T {
         if self.ptr > 0 {
             self.buf[self.ptr - 1].clone()
         } else {
