@@ -1,0 +1,231 @@
+grammar;
+
+
+pub Assignment: String = {
+    <v:Var> "=" <c:Comparison> => {
+        let mut res = String::from(v.clone());
+        res.push_str(".set(");
+        res.push_str(c.as_str());
+        res.push_str(");");
+        res
+    },
+
+    <v:Var> "+=" <c:Comparison> => {
+        let mut res = String::from(v.clone());
+        res.push_str(".set(");
+        res.push_str(v.as_str());
+        res.push_str(".get() + ");
+        res.push_str(c.as_str());
+        res.push_str(");");
+        res
+    },
+
+    <v:Var> "-=" <c:Comparison> => {
+        let mut res = String::from(v.clone());
+        res.push_str(".set(");
+        res.push_str(v.as_str());
+        res.push_str(".get() - ");
+        res.push_str(c.as_str());
+        res.push_str(");");
+        res
+    },
+
+    <v:Var> "*=" <c:Comparison> => {
+        let mut res = String::from(v.clone());
+        res.push_str(".set(");
+        res.push_str(v.as_str());
+        res.push_str(".get() * ");
+        res.push_str(c.as_str());
+        res.push_str(");");
+        res
+    },
+
+    <v:Var> "/=" <c:Comparison> => {
+        let mut res = String::from(v.clone());
+        res.push_str(".set(");
+        res.push_str(v.as_str());
+        res.push_str(".get() / ");
+        res.push_str(c.as_str());
+        res.push_str(");");
+        res
+    },
+
+    <e:Logical> => {
+        let mut res = String::from(e);
+        res.push_str(";");
+        res
+    }
+};
+
+
+Logical: String = {
+    <l:Logical> "&&" <c:Comparison> => {
+        let mut res = String::from(l);
+        res.push_str("&&");
+        res.push_str(c.as_str());
+        res
+    },
+
+    <l:Logical> "||" <c:Comparison> => {
+        let mut res = String::from(l);
+        res.push_str("||");
+        res.push_str(c.as_str());
+        res
+    },
+
+    "!" <c:Comparison> => {
+        let mut res = String::from("!");
+        res.push_str(c.as_str());
+        res
+    },
+
+    Comparison,
+}
+
+Comparison: String = {
+    <e:Expr> "==" <f:Expr> => {
+        let mut res = String::from(e.as_str());
+        res.push_str(" == ");
+        res.push_str(f.as_str());
+        res
+    },
+
+    <e:Expr> ">=" <f:Expr> => {
+        let mut res = String::from(e.as_str());
+        res.push_str(" >= ");
+        res.push_str(f.as_str());
+        res
+    },
+
+    <e:Expr> "<=" <f:Expr> => {
+        let mut res = String::from(e.as_str());
+        res.push_str(" <= ");
+        res.push_str(f.as_str());
+        res
+    },
+
+    <e:Expr> "!=" <f:Expr> => {
+        let mut res = String::from(e.as_str());
+        res.push_str(" != ");
+        res.push_str(f.as_str());
+        res
+    },
+
+    <e:Expr> ">" <f:Expr> => {
+        let mut res = String::from(e.as_str());
+        res.push_str(" > ");
+        res.push_str(f.as_str());
+        res
+    },
+
+    <e:Expr> "<" <f:Expr> => {
+        let mut res = String::from(e.as_str());
+        res.push_str(" < ");
+        res.push_str(f.as_str());
+        res
+    },
+
+    Expr,
+
+};
+
+
+
+Expr: String = {
+    <l:Expr> "+" <r:Factor> => {
+        let mut res = String::from(l);
+        res.push_str("+");
+        res.push_str(r.as_str());
+        res
+    },
+
+    <l:Expr> "-" <r:Factor> => {
+        let mut res = String::from(l);
+        res.push_str("-");
+        res.push_str(r.as_str());
+        res
+    },
+
+    Factor,
+
+};
+
+
+Factor: String = {
+    <l:Factor> "*" <r:Term> => {
+        let mut res = String::from(l);
+        res.push_str("*");
+        res.push_str(r.as_str());
+        res
+    },
+
+    <l:Factor> "/" <r:Term> => {
+        let mut res = String::from(l);
+        res.push_str("*");
+        res.push_str(r.as_str());
+        res
+    },
+
+    Term,
+};
+
+Term: String = {
+    Num,
+    <v:Var> => {
+        let mut res = String::from(v);
+        res.push_str(".get() ");
+        res
+    },
+
+    "(" <e:Expr> ")" => {
+        let mut res = String::from("(");
+        res.push_str(e.as_str());
+        res.push_str(")");
+        res
+    }
+};
+
+
+
+
+Var: String = {
+    "process" <rest: r"(\.([a-zA-Z0-9])+)+"> => {
+        let mut res = String::new();
+        res.push_str("IOTREE.process");
+        let mut mem = rest.split(".").peekable();
+        mem.next();
+        while let Some(m) = mem.next() {
+            if mem.peek() != None {
+                res.push_str(".m_");
+            } else {
+                res.push_str(".");
+            }
+            res.push_str(m);
+        }
+        res
+    },
+
+    "control" <rest: r"(\.([a-zA-Z0-9])+)+"> => {
+        let mut res = String::new();
+        res.push_str("IOTREE.control");
+        let mut mem = rest.split(".").peekable();
+        mem.next();
+        while let Some(m) = mem.next() {
+            if mem.peek() != None {
+                res.push_str(".m_");
+            } else {
+                res.push_str(".");
+            }
+            res.push_str(m);
+        }
+        res
+    },
+};
+
+Num: String = {
+    r"[0-9]+" => <>.to_string(),
+    r"[0-9]+\.[0-9]+" => <>.to_string(),
+    "true" => <>.to_string(),
+    "false" => <>.to_string(),
+};
+

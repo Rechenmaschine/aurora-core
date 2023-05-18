@@ -1,0 +1,4 @@
+[1]
+var = "process.Sensor1.pressure"
+condition = "process.Sensor1.pressure > 5"
+callback = "process.Sensor1.pressure = 5"
