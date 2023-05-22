@@ -1,13 +1,22 @@
 use crate::state::State;
 use std::sync::mpsc::Receiver;
 
-struct StateMachine<E> {
+pub struct StateMachine<E> {
     current_state: Box<dyn State<E>>,
     event_queue: Receiver<E>,
 }
 
 impl<E> StateMachine<E> {
-    fn step(&mut self) {
+    pub fn new(initial_state: impl State<E> + 'static) -> Self {
+        let mut boxed = Box::new(initial_state);
+        let queue = boxed.create_event_sources();
+        Self {
+            current_state: boxed,
+            event_queue: queue,
+        }
+    }
+
+    pub fn step(&mut self) {
         match self.event_queue.recv() {
             Ok(event) => {
                 if let Some(mut next_state) = self.current_state.handle_event(event) {
@@ -17,7 +26,7 @@ impl<E> StateMachine<E> {
                 }
             }
             Err(_recv_err) => {
-                todo!()
+                panic!("The event queue has no senders left, no events are being generated, the FSM is stuck.")
             }
         }
     }
