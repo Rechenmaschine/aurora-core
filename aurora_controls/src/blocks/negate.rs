@@ -5,7 +5,7 @@ use std::ops::Neg;
 pub struct Negator {}
 
 impl Negator {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self { }
     }
 }

@@ -5,7 +5,7 @@ use std::iter::Sum;
 pub struct Adder {}
 
 impl Adder {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self { }
     }
 }

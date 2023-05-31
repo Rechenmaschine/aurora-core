@@ -5,7 +5,7 @@ use std::iter::Product;
 pub struct Multiplier {}
 
 impl Multiplier {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self { }
     }
 }
