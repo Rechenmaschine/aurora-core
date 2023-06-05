@@ -36,6 +36,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "62af46d040ba9df09edc6528dae9d8e49f5f3e82f55b7d2ec31a733c38dbc49d"
 
 [[package]]
+name = "aurora_fsm"
+version = "0.1.0"
+dependencies = [
+ "event_gen",
+]
+
+[[package]]
 name = "aurora_hal"
 version = "0.1.0"
 dependencies = [
@@ -176,6 +183,10 @@ dependencies = [
  "cc",
  "libc",
 ]
+
+[[package]]
+name = "event_gen"
+version = "0.1.0"
 
 [[package]]
 name = "fixedbitset"
