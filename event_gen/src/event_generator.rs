@@ -9,3 +9,9 @@ pub trait EventGenerator<T: Send, U> {
 pub trait EventGenHandle {
     fn stop(self);
 }
+
+impl EventGenHandle for () {
+    fn stop(self) {
+        // Do nothing.
+    }
+}

@@ -1,4 +1,4 @@
-use crate::event_generator::{EventGenHandle, EventGenerator};
+use crate::event_generator::EventGenerator;
 
 use std::marker::Send;
 use std::sync::mpsc::Sender;
@@ -8,22 +8,12 @@ pub struct OneShotGenerator<T: Send> {
     pub value: T,
 }
 
-pub struct OneShotHandle {}
-
-impl EventGenHandle for OneShotHandle {
-    fn stop(self) {
-        // Empty, nothing to do as a one shot will exit immediately
-    }
-}
-
 impl<T: 'static + std::marker::Send> EventGenerator<T, ()> for OneShotGenerator<T> {
-    type Handle = OneShotHandle;
+    type Handle = ();
     fn start(self, send_handle: Sender<T>) -> Self::Handle {
         thread::spawn(move || {
             send_handle.send(self.value).unwrap();
         });
-
-        OneShotHandle {}
     }
 }
 
