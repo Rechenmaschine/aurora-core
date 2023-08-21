@@ -130,7 +130,7 @@ mod tests {
             event_producer: |_now, _prev| 42,
         };
 
-        let handle = tick_gen.start(s);
+        let mut handle = tick_gen.start(s);
         handle.stop();
 
         let stop_time = Instant::now();
