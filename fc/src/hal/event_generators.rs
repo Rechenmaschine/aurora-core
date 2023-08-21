@@ -1,0 +1,77 @@
+use crate::hal::{get_io_tree, IoTree, Signaling};
+use event_gen::event_generator::{EventGenHandle, EventGenerator};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::Sender;
+use std::sync::Arc;
+use std::thread;
+
+pub struct IoEventGen<'io, A, P, B> {
+    tree: &'io IoTree,
+    accessor: A,
+    predicate: P,
+    multi_shot: bool,
+    event_builder: B,
+}
+
+pub struct IoEventGenHandle {
+    stop_flag: Arc<AtomicBool>,
+}
+
+impl EventGenHandle for IoEventGenHandle {
+    fn stop(&mut self) {
+        self.stop_flag.store(true, Ordering::SeqCst)
+    }
+}
+
+impl<'io, T, A, P, B, E> IoEventGen<'io, A, P, B>
+where
+    T: 'static + Clone + Send,
+    A: FnOnce(&'io IoTree) -> &'io Signaling<T>,
+    P: Fn(&T) -> bool + Send + 'static,
+    B: Fn(&T) -> E + Send + 'static,
+{
+    pub fn new_single_shot(accessor: A, predicate: P, event_builder: B) -> Self {
+        Self {
+            tree: get_io_tree(),
+            accessor,
+            predicate,
+            multi_shot: false,
+            event_builder,
+        }
+    }
+}
+
+impl<'io, T, A, P, B, E> EventGenerator<E, ()> for IoEventGen<'io, A, P, B>
+where
+    T: 'static + Clone + Send,
+    A: FnOnce(&'io IoTree) -> &'io Signaling<T>,
+    P: Fn(&T) -> bool + Send + 'static,
+    B: Fn(&T) -> E + Send + 'static,
+    E: Send + 'static,
+{
+    type Handle = IoEventGenHandle;
+
+    fn start(self, send_handle: Sender<E>) -> Self::Handle {
+        let stop_flag = Arc::new(AtomicBool::new(false));
+        let stop_flag2 = stop_flag.clone();
+
+        match self.multi_shot {
+            true => {
+                unimplemented!()
+            }
+            false => {
+                let signal_var = Signaling::clone((self.accessor)(self.tree));
+                thread::spawn(move || {
+                    let val = signal_var.wait_for(self.predicate);
+                    if !stop_flag2.load(Ordering::SeqCst) {
+                        send_handle
+                            .send((self.event_builder)(&*val))
+                            .expect("Failed to send event as other side has exited.");
+                    }
+                });
+            }
+        }
+
+        Self::Handle { stop_flag }
+    }
+}

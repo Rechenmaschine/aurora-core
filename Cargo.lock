@@ -189,6 +189,14 @@ name = "event_gen"
 version = "0.1.0"
 
 [[package]]
+name = "fc"
+version = "0.1.0"
+dependencies = [
+ "aurora_fsm",
+ "event_gen",
+]
+
+[[package]]
 name = "fixedbitset"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
