@@ -13,14 +13,18 @@ pub struct TickGenerator<T: Send> {
 }
 
 pub struct TickGenHandle {
-    join_handle: thread::JoinHandle<()>,
+    join_handle: Option<thread::JoinHandle<()>>,
     stop_flag: Arc<AtomicBool>,
 }
 
 impl EventGenHandle for TickGenHandle {
-    fn stop(self) {
+    fn stop(&mut self) {
         self.stop_flag.store(true, Ordering::Relaxed);
-        self.join_handle.join().unwrap();
+        if let Some(join_handle) = self.join_handle.take() {
+            join_handle
+                .join()
+                .expect("Failed to join thread of tick genenerator after sending exit signal");
+        }
     }
 }
 
@@ -42,7 +46,7 @@ impl<T: 'static + Send> EventGenerator<T, ()> for TickGenerator<T> {
         });
 
         Self::Handle {
-            join_handle,
+            join_handle: Some(join_handle),
             stop_flag,
         }
     }

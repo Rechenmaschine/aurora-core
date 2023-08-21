@@ -7,11 +7,11 @@ pub trait EventGenerator<T: Send, U> {
 }
 
 pub trait EventGenHandle {
-    fn stop(self);
+    fn stop(&mut self);
 }
 
 impl EventGenHandle for () {
-    fn stop(self) {
+    fn stop(&mut self) {
         // Do nothing.
     }
 }
