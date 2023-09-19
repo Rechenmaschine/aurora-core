@@ -8,3 +8,5 @@ edition = "2021"
 [dependencies]
 aurora_fsm = {path = "../aurora_fsm"}
 event_gen = {path = "../event_gen"}
+nalgebra = "0.32"
+approx = "0.5"

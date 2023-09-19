@@ -1,11 +1,10 @@
-use crate::fsm::Event;
-use crate::hal::event_generators::IoEventGen;
-use aurora_fsm;
 use aurora_fsm::state::State;
-use event_gen::event_generator::{EventGenHandle, EventGenerator};
-use event_gen::generators::one_shot_generator::OneShotGenerator;
-use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
+use std::sync::mpsc;
+use event_gen::event_generator::{EventGenerator, EventGenHandle};
+use crate::fsm::Event;
+use crate::fsm::states::Armed;
+use crate::hal::event_generators::IoEventGen;
 
 pub struct Idle {
     event_gen_handles: Vec<Box<dyn EventGenHandle>>,
@@ -49,42 +48,5 @@ impl State<Event> for Idle {
         for mut handle in self.event_gen_handles.drain(..) {
             handle.stop()
         }
-    }
-}
-
-pub struct Armed {}
-
-impl Armed {
-    fn new() -> Self {
-        Self {}
-    }
-}
-
-impl State<Event> for Armed {
-    fn handle_event(&mut self, event: Event) -> Option<Box<dyn State<Event>>> {
-        match event {
-            Event::Exit => {
-                println!("Entered ARMED state, exiting...");
-                std::process::exit(0);
-            }
-            e => {
-                eprintln!("Warning: Encountered unexpected event: {e:?} in state Armed");
-                None
-            }
-        }
-    }
-
-    fn create_event_sources(&mut self) -> Receiver<Event> {
-        let (sender, receiver) = mpsc::channel();
-
-        let step_event_gen = OneShotGenerator { value: Event::Exit };
-
-        step_event_gen.start(sender);
-
-        receiver
-    }
-
-    fn destroy_event_sources(&mut self) {
-        // Empty.
     }
 }

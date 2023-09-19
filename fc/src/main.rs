@@ -1,6 +1,6 @@
 #![feature(once_cell)]
 
-use crate::fsm::states::Idle;
+use fsm::states::Idle;
 use crate::hal::get_io_tree;
 use aurora_fsm::state_machine::StateMachine;
 use std::thread;
@@ -8,6 +8,7 @@ use std::time::Duration;
 
 mod fsm;
 mod hal;
+mod guidance;
 
 fn main() {
     // Start FSM
