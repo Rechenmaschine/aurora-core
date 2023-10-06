@@ -3,5 +3,5 @@
 members = [
     "aurora_fsm",
     "aurora_hal",
-    "aurora_hal/aurora_hal_macros"
+    "event_gen"
 ]
