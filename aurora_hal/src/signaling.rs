@@ -7,8 +7,8 @@ pub struct Signaling<T> {
 }
 
 impl<T> Signaling<T>
-    where
-        T: Clone,
+where
+    T: Clone,
 {
     pub fn new(data: T) -> Self {
         Self {
@@ -32,8 +32,8 @@ impl<T> Signaling<T>
     }
 
     pub fn wait_for<F>(&self, mut predicate: F) -> MutexGuard<T>
-        where
-            F: FnMut(&T) -> bool,
+    where
+        F: FnMut(&T) -> bool,
     {
         let (cvar, lock) = &*self.pair;
 
@@ -44,19 +44,28 @@ impl<T> Signaling<T>
     }
 }
 
-impl<T> Debug for Signaling<T> where T: Debug + Clone {
+impl<T> Debug for Signaling<T>
+where
+    T: Debug + Clone,
+{
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "Signaling {{ {:?} }}", self.get())
     }
 }
 
-impl<T> Display for Signaling<T> where T: Display + Clone {
+impl<T> Display for Signaling<T>
+where
+    T: Display + Clone,
+{
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "Signaling {{ {} }}", self.get())
     }
 }
 
-impl<T> Default for Signaling<T> where T: Default + Clone {
+impl<T> Default for Signaling<T>
+where
+    T: Default + Clone,
+{
     fn default() -> Self {
         Signaling::new(T::default())
     }

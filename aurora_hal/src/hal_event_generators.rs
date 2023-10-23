@@ -1,10 +1,10 @@
+use crate::iotree::IoTree;
+use crate::signaling::Signaling;
 use event_gen::event_generator::{EventGenHandle, EventGenerator};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Sender;
 use std::sync::Arc;
 use std::thread;
-use crate::iotree::IoTree;
-use crate::signaling::Signaling;
 
 pub struct IoEventGen<'io, IO, A, P, B> {
     tree: &'io IO,
@@ -25,12 +25,12 @@ impl EventGenHandle for IoEventGenHandle {
 }
 
 impl<'io, T, IO, A, P, B, E> IoEventGen<'io, IO, A, P, B>
-    where
-        T: 'static + Clone + Send,
-        IO: IoTree + 'static,
-        A: FnOnce(&'io IO) -> &'io Signaling<T>,
-        P: Fn(&T) -> bool + Send + 'static,
-        B: Fn(&T) -> E + Send + 'static,
+where
+    T: 'static + Clone + Send,
+    IO: IoTree + 'static,
+    A: FnOnce(&'io IO) -> &'io Signaling<T>,
+    P: Fn(&T) -> bool + Send + 'static,
+    B: Fn(&T) -> E + Send + 'static,
 {
     pub fn new_single_shot(accessor: A, predicate: P, event_builder: B) -> Self {
         Self {
@@ -44,12 +44,12 @@ impl<'io, T, IO, A, P, B, E> IoEventGen<'io, IO, A, P, B>
 }
 
 impl<'io, T, IO, A, P, B, E> EventGenerator<E, ()> for IoEventGen<'io, IO, A, P, B>
-    where
-        T: 'static + Clone + Send,
-        A: FnOnce(&'io IO) -> &'io Signaling<T>,
-        P: Fn(&T) -> bool + Send + 'static,
-        B: Fn(&T) -> E + Send + 'static,
-        E: Send + 'static,
+where
+    T: 'static + Clone + Send,
+    A: FnOnce(&'io IO) -> &'io Signaling<T>,
+    P: Fn(&T) -> bool + Send + 'static,
+    B: Fn(&T) -> E + Send + 'static,
+    E: Send + 'static,
 {
     type Handle = IoEventGenHandle;
 

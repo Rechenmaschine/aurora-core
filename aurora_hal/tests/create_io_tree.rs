@@ -6,7 +6,7 @@ struct Inputs {}
 #[derive(Default)]
 struct Outputs {}
 
-init_io_tree!{
+init_io_tree! {
     inputs: Inputs,
     outputs: Outputs
 }
