@@ -9,10 +9,11 @@ pub struct OneShotGenerator<T: Send> {
 }
 
 impl<T: 'static + std::marker::Send> EventGenerator<T, ()> for OneShotGenerator<T> {
-    fn start(self, send_handle: Sender<T>) -> thread::JoinHandle<()> {
+    type Handle = ();
+    fn start(self, send_handle: Sender<T>) -> Self::Handle {
         thread::spawn(move || {
             send_handle.send(self.value).unwrap();
-        })
+        });
     }
 }
 
