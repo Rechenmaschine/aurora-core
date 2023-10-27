@@ -3,5 +3,7 @@
 members = [
     "aurora_fsm",
     "aurora_hal",
-    "event_gen"
+    "event_gen",
+    "nicollier_gnc",
+    "nicollier_gnc_sim"
 ]
