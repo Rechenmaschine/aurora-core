@@ -17,10 +17,22 @@ use serde::{Serialize, Deserialize};
 
 #[derive(Copy, Clone, Debug, Serialize)]
 pub struct SystemState {
+    inertial_frame: FrameState,
+    body_frame: FrameState,
+    total_time: f64,
+}
+
+#[derive(Copy, Clone, Debug, Serialize)]
+pub struct FrameState {
     pos: Vector3<f64>,
+    velocity: Vector3<f64>,
+    acceleration: Vector3<f64>,
+
+
     angle: Vector3<f64>,
     angle_velocity: Vector3<f64>,
-    total_time: f64
+    angle_acceleration: Vector3<f64>,
+
 }
 
 #[derive(Copy, Clone, Debug)]
