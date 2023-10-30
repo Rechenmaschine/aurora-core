@@ -105,7 +105,11 @@ dependencies = [
 name = "nicollier_gnc_sim"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "nalgebra",
  "nicollier_gnc",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
