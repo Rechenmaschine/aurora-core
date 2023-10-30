@@ -6,9 +6,9 @@ use std::alloc::System;
 pub struct ThreeDof {
     state: SystemState,
 }
-const a: f64 = 0.0;     //Coefficient for roll rate in the ODE
-const b1: f64 = 0.0;    //Coefficient for a-symmetric inputs in the ODE
-const b2: f64 = 0.0;
+const A: f64 = 0.0;     //Coefficient for roll rate in the ODE
+const B1: f64 = 0.0;    //Coefficient for A-symmetric inputs in the ODE
+const B2: f64 = 0.0;
 const VELOCITY_VERTICAL: f64 = 0.0;
 const AIRSPEED_HORIZONTAL: f64 = 0.0;
 //Coefficient for symmetric inputs in the ODE
@@ -34,9 +34,9 @@ impl Model for ThreeDof {
 
         //see Periphas report page 73 (7.1)
         state.inertial_frame.angle_acceleration.z =
-            a * state.inertial_frame.angle_velocity.z
-            + b1 * (input.asym / (1.0 + input.sym))
-            + b2 * (input.asym / (1.0 + input.sym)).powf(3.0) ;
+            A * state.inertial_frame.angle_velocity.z
+            + B1 * (input.asym / (1.0 + input.sym))
+            + B2 * (input.asym / (1.0 + input.sym)).powf(3.0) ;
 
 
         state.inertial_frame.angle_velocity.x = 0.0;
@@ -53,7 +53,7 @@ impl Model for ThreeDof {
         state.inertial_frame.angle.z += delta_t * state.inertial_frame.angle_velocity.z;
 
         //TODO:transform to body frame
-
+        state.body_frame.velocity = self.inertial_to_body() * state.inertial_frame.velocity;
 
         state.total_time += delta_t;
         return self.state;
