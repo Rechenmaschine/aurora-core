@@ -10,7 +10,7 @@ use crate::guidance::Guidance;
 use crate::model::three_dof::ThreeDof;
 use crate::model::Model;
 use serde::{Serialize, Deserialize};
-use nalgebra::{Vector2, Vector3};
+use nalgebra::{Vector3};
 use anyhow::Result;
 use std::f64::consts::PI;
 use std::ops::{Deref, DerefMut};
@@ -41,7 +41,23 @@ pub struct Deflections {
 }
 
 #[derive(Copy, Clone, Debug)]
-pub struct Reference(f64);
+pub struct Reference{
+    yaw: f64,
+    yaw_previous: f64,
+    sym_deflection: f64,
+    sym_deflection_previous:f64
+}
+
+impl Reference {
+    pub fn new(yaw: f64, yaw_previous: f64, sym_deflection: f64, sym_deflection_previous: f64) -> Self {
+        Self {
+            yaw,
+            yaw_previous,
+            sym_deflection,
+            sym_deflection_previous
+        }
+    }
+}
 fn main() -> Result<()> {
 
     let delta_t = 1.0 / 100.0;
@@ -66,7 +82,7 @@ fn main() -> Result<()> {
         total_time: 0.0
     };
 
-    let mut guidance = ConstantGuidance::new(Reference(PI));
+    let mut guidance = ConstantGuidance::new(Reference::new(0.0,0.0,0.0,0.0));
     let mut controller = PController::new();
     let mut model = ThreeDof::new(initial_state);
 
