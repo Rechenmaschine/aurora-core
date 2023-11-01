@@ -6,6 +6,7 @@ use std::alloc::System;
 
 pub struct ThreeDof {
     state: SystemState,
+    wind: Vector3<f64>,
 }
 const A: f64 = 0.0;     //Coefficient for roll rate in the ODE
 const B1: f64 = 0.0;    //Coefficient for A-symmetric inputs in the ODE
@@ -17,7 +18,11 @@ impl ThreeDof {
     pub fn new(state: SystemState) -> Self {
         Self {
             state
+            wind: Vector3::new(0.0, 0.0, 0.0), // No wind by default
         }
+    }
+    pub fn set_wind(&mut self, wind: Vector3<f64>) {
+        self.wind = wind;
     }
 }
 
@@ -45,9 +50,9 @@ impl Model for ThreeDof {
         state.inertial_frame.angle_velocity.z += delta_t * state.inertial_frame.angle_acceleration.z;
 
         //Velocities (Inertial frame)
-        state.inertial_frame.velocity.x = AIRSPEED_HORIZONTAL * f64::cos(state.inertial_frame.angle.z);//TODO: add wind
-        state.inertial_frame.velocity.y = AIRSPEED_HORIZONTAL * f64::sin(state.inertial_frame.angle.z);//TODO: add wind
-        state.inertial_frame.velocity.z = VELOCITY_VERTICAL;
+        state.inertial_frame.velocity.x = AIRSPEED_HORIZONTAL * f64::cos(state.inertial_frame.angle.z)+ self.wind.x;;//TODO: add wind
+        state.inertial_frame.velocity.y = AIRSPEED_HORIZONTAL * f64::sin(state.inertial_frame.angle.z)+ self.wind.y;;//TODO: add wind
+        state.inertial_frame.velocity.z = VELOCITY_VERTICAL+ self.wind.z;
 
         state.inertial_frame.angle.x = 0.0;
         state.inertial_frame.angle.y = 0.0;
