@@ -1,8 +1,17 @@
 [workspace]
+resolver = "2"
 
 members = [
     "aurora_fsm",
     "aurora_hal",
     "event_gen",
-    "nicollier_gnc"
+    "nicollier_gnc",
+    "nicollier_trajectory_viewer"
+  #  "nicollier_gnc_sim"
 ]
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
