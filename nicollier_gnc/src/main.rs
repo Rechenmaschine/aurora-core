@@ -57,7 +57,7 @@ fn main() -> Result<()> {
 
     let initial_state = SystemState {
 
-        inertial_frame_position: Vector3::new(0.0,0.0, -1000.0),
+        inertial_frame_position: Vector3::new(0.0,0.0, -300.0),
         inertial_frame_velocity: Vector3::zeros(),
         inertial_frame_acceleration: Vector3::zeros(),
         inertial_frame_angle: Vector3::zeros(),
