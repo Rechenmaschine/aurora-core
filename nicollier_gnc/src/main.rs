@@ -53,9 +53,9 @@ fn main() -> Result<()> {
 
     let initial_state = SystemState {
 
-        inertial_frame_position: Vector3::zeros(),
+        inertial_frame_position: Vector3::new(0.0,0.0, -1000.0),
         inertial_frame_velocity: Vector3::zeros(),
-        inertial_frame_acceleration: Vector3::zeros(),
+        inertial_frame_acceleration: Vsector3::zeros(),
         inertial_frame_angle: Vector3::zeros(),
         inertial_frame_angle_velocity : Vector3::zeros(),
         inertial_frame_angle_acceleration: Vector3::zeros(),
@@ -78,7 +78,7 @@ fn main() -> Result<()> {
         let control_inputs = controller.step(model.get_state(), reference, delta_t);
         let updated_state = model.step(control_inputs, delta_t);
 
-        println!("{}", serde_json::to_string(&updated_state)?);
+        println!("x {}, y: {}, z: {} \n", updated_state.inertial_frame_position.x,updated_state.inertial_frame_position.y, -updated_state.inertial_frame_position.z);
     }
 
     Ok(())
