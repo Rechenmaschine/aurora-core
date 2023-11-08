@@ -52,7 +52,7 @@ impl Reference {
 }
 fn main() -> Result<()> {
     let mut wtr = Writer::from_path("foo.csv")?;
-    wtr.write_record(&["a", "b", "c"])?;
+
     let delta_t = 0.01;
 
     let initial_state = SystemState {
