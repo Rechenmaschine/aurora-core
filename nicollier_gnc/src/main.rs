@@ -2,7 +2,10 @@ mod model;
 mod controller;
 mod guidance;
 
-
+use std::error::Error;
+use csv::Writer;
+use std::fs::File;
+use std::io::prelude::*;
 use crate::controller::p_controller::PController;
 use crate::controller::Controller;
 use crate::guidance::constant_guidance::ConstantGuidance;
@@ -48,14 +51,15 @@ impl Reference {
 
 }
 fn main() -> Result<()> {
-
-    let delta_t = 1.0 / 100.0;
+    let mut wtr = Writer::from_path("foo.csv")?;
+    wtr.write_record(&["a", "b", "c"])?;
+    let delta_t = 0.01;
 
     let initial_state = SystemState {
 
         inertial_frame_position: Vector3::new(0.0,0.0, -1000.0),
         inertial_frame_velocity: Vector3::zeros(),
-        inertial_frame_acceleration: Vsector3::zeros(),
+        inertial_frame_acceleration: Vector3::zeros(),
         inertial_frame_angle: Vector3::zeros(),
         inertial_frame_angle_velocity : Vector3::zeros(),
         inertial_frame_angle_acceleration: Vector3::zeros(),
@@ -77,9 +81,10 @@ fn main() -> Result<()> {
         let reference = guidance.get_reference(model.get_state());
         let control_inputs = controller.step(model.get_state(), reference, delta_t);
         let updated_state = model.step(control_inputs, delta_t);
-
-        println!("x {}, y: {}, z: {} \n", updated_state.inertial_frame_position.x,updated_state.inertial_frame_position.y, -updated_state.inertial_frame_position.z);
+        wtr.write_record(&[updated_state.inertial_frame_position.x.to_string(),updated_state.inertial_frame_position.y.to_string(), (-updated_state.inertial_frame_position.z).to_string()])?;
+        //println!("{},{},{}\n", updated_state.inertial_frame_position.x,updated_state.inertial_frame_position.y, -updated_state.inertial_frame_position.z);
     }
+    wtr.flush()?;
 
     Ok(())
 }

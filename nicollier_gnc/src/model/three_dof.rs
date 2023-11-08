@@ -8,11 +8,11 @@ pub struct ThreeDof {
     state: SystemState,
     wind: Vector2<f64>,
 }
-const A: f64 = 1.0;     //Coefficient for roll rate in the ODE
+const A: f64 = 0.5;     //Coefficient for roll rate in the ODE
 const B1: f64 = 1.0;    //Coefficient for A-symmetric inputs in the ODE
 const B2: f64 = 1.0;
-const VELOCITY_VERTICAL: f64 = 4.0;
-const AIRSPEED_HORIZONTAL: f64 = 7.0;
+const VELOCITY_VERTICAL: f64 = 10.0;
+const AIRSPEED_HORIZONTAL: f64 = 4.0;
 //Coefficient for symmetric inputs in the ODE
 impl ThreeDof {
     pub fn new(state: SystemState) -> Self {

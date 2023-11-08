@@ -7,3 +7,5 @@
 
 # Don't include IDE configs
 **/.idea
+
+foo.csv
