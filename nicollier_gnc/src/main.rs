@@ -78,8 +78,7 @@ fn main() -> Result<()> {
         let control_inputs = controller.step(model.get_state(), reference, delta_t);
         let updated_state = model.step(control_inputs, delta_t);
 
-        //println!("{}", serde_json::to_string(&updated_state)?);
-        println!("{}", model.get_state().total_time);
+        println!("{}", serde_json::to_string(&updated_state)?);
     }
 
     Ok(())

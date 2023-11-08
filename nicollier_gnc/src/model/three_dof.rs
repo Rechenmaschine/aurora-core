@@ -36,45 +36,40 @@ impl Model for ThreeDof {
     }
     fn step(&mut self, input: Self::Input, delta_t: f64) -> Self::State {
 
-        let state: &mut SystemState = &mut self.state;
 
         //see Periphas report page 73 (7.1)
-        state.inertial_frame_angle_acceleration.z =
-            A * state.inertial_frame_angle_velocity.z
-            + B1 * (input.asym / (1.0 + input.sym))
-            + B2 * (input.asym / (1.0 + input.sym)).powf(3.0);
+        self.state.inertial_frame_angle_acceleration.z =
+            A * self.state.inertial_frame_angle_velocity.z
+                + B1 * (input.asym / (1.0 + input.sym))
+                + B2 * (input.asym / (1.0 + input.sym)).powf(3.0);
 
+        self.state.inertial_frame_angle_velocity.x = 0.0;
+        self.state.inertial_frame_angle_velocity.y = 0.0;
+        self.state.inertial_frame_angle_velocity.z += delta_t * self.state.inertial_frame_angle_acceleration.z;
 
-        state.inertial_frame_angle_velocity.x = 0.0;
-        state.inertial_frame_angle_velocity.y = 0.0;
-        state.inertial_frame_angle_velocity.z += delta_t * state.inertial_frame_angle_acceleration.z;
+// Velocities (Inertial frame)
+        self.state.inertial_frame_velocity.x = AIRSPEED_HORIZONTAL * f64::cos(self.state.inertial_frame_angle.z) + self.wind.x;
+        self.state.inertial_frame_velocity.y = AIRSPEED_HORIZONTAL * f64::sin(self.state.inertial_frame_angle.z) + self.wind.y;
+        self.state.inertial_frame_velocity.z = VELOCITY_VERTICAL;
 
-        // Velocities (Inertial frame)
-        state.inertial_frame_velocity.x = AIRSPEED_HORIZONTAL * f64::cos(state.inertial_frame_angle.z) + self.wind.x; // TODO: add wind
-        state.inertial_frame_velocity.y = AIRSPEED_HORIZONTAL * f64::sin(state.inertial_frame_angle.z) + self.wind.y; // TODO: add wind
-        state.inertial_frame_velocity.z = VELOCITY_VERTICAL;
+// Integrate Velocities (inertial frame)
+        self.state.inertial_frame_position.x += delta_t * self.state.inertial_frame_velocity.x;
+        self.state.inertial_frame_position.y += delta_t * self.state.inertial_frame_velocity.y;
+        self.state.inertial_frame_position.z += delta_t * self.state.inertial_frame_velocity.z;
 
-        // Integrate Velocities (inertial frame)
-        state.inertial_frame_position.x += delta_t * state.inertial_frame_velocity.x;
-        state.inertial_frame_position.y += delta_t * state.inertial_frame_velocity.y;
-        state.inertial_frame_position.z += delta_t * state.inertial_frame_velocity.z;
-
-        state.inertial_frame_angle.x = 0.0;
-        state.inertial_frame_angle.y = 0.0;
-        state.inertial_frame_angle.z += delta_t * state.inertial_frame_angle_velocity.z;
-
+        self.state.inertial_frame_angle.x = 0.0;
+        self.state.inertial_frame_angle.y = 0.0;
+        self.state.inertial_frame_angle.z += delta_t * self.state.inertial_frame_angle_velocity.z;
 
         let rotation: Rotation3<f64> = self.inertial_to_body();
 
-        //yakimenko-2015, 5.9
-        state.body_frame_velocity = rotation * state.inertial_frame_velocity;
-        state.body_frame_angle_velocity = rotation * state.inertial_frame_angle_velocity;
-        state.body_frame_angle_acceleration = rotation * state.inertial_frame_angle_acceleration;
-        state.body_frame_acceleration = rotation * state.inertial_frame_acceleration;
+//yakimenko-2015, 5.9
+        self.state.body_frame_velocity = rotation * self.state.inertial_frame_velocity;
+        self.state.body_frame_angle_velocity = rotation * self.state.inertial_frame_angle_velocity;
+        self.state.body_frame_angle_acceleration = rotation * self.state.inertial_frame_angle_acceleration;
+        self.state.body_frame_acceleration = rotation * self.state.inertial_frame_acceleration;
 
-        state.total_time += delta_t;
-        println!("MODEL {}", state.total_time);
-
+        self.state.total_time += delta_t;
         return self.state;
 
 
