@@ -8,4 +8,7 @@
 # Don't include IDE configs
 **/.idea
 
-foo.csv
+def.csv
+pos.csv
+ref.csv
+yaw.csv

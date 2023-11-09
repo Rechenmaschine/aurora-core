@@ -1,4 +1,5 @@
-use nalgebra::{Vector2, Vector3};
+use std::f32::consts::PI;
+use nalgebra::{Rotation2, Vector2, Vector3};
 use crate::guidance::Guidance;
 use crate::{Reference, SystemState};
 
@@ -20,8 +21,11 @@ impl Guidance for ConstantGuidance {
 
     fn get_reference(&mut self, state: Self::State) -> Self::Reference {
         let relative_vector:Vector2<f64> = Vector2::new(TARGET.x - state.inertial_frame_position.x, TARGET.y - state.inertial_frame_position.y);
-        let north: Vector2<f64> = Vector2::new(1.0, 0.0);
-        self.0 = Reference(relative_vector.angle(&north));
+
+        let heading = Rotation2::rotation_between(&relative_vector,&Vector2::x());
+
+
+        self.0 = Reference(-heading.angle());
         self.0
     }
 }

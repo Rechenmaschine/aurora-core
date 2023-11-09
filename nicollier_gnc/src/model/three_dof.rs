@@ -1,18 +1,18 @@
 //this is Manu's first comment ever here
 use crate::model::Model;
 use crate::{Deflections, SystemState};
-use nalgebra::{Rotation3, Vector2};
+use nalgebra::{Matrix3, Rotation3, Vector2};
 use std::alloc::System;
 
 pub struct ThreeDof {
     state: SystemState,
     wind: Vector2<f64>,
 }
-const A: f64 = 0.5;     //Coefficient for roll rate in the ODE
-const B1: f64 = 1.0;    //Coefficient for A-symmetric inputs in the ODE
-const B2: f64 = 1.0;
-const VELOCITY_VERTICAL: f64 = 10.0;
-const AIRSPEED_HORIZONTAL: f64 = 4.0;
+const A: f64 = -2.0497;     //Coefficient for roll rate in the ODE
+const B1: f64 = 0.6494;    //Coefficient for A-symmetric inputs in the ODE
+const B2: f64 = 1.6809;
+const VELOCITY_VERTICAL: f64 = 11.62;
+const AIRSPEED_HORIZONTAL: f64 = 5.40;
 //Coefficient for symmetric inputs in the ODE
 impl ThreeDof {
     pub fn new(state: SystemState) -> Self {
@@ -61,7 +61,7 @@ impl Model for ThreeDof {
         self.state.inertial_frame_angle.y = 0.0;
         self.state.inertial_frame_angle.z += delta_t * self.state.inertial_frame_angle_velocity.z;
 
-        let rotation: Rotation3<f64> = self.inertial_to_body();
+        let rotation: Matrix3<f64> = self.inertial_to_body();
 
 //yakimenko-2015, 5.9
         self.state.body_frame_velocity = rotation * self.state.inertial_frame_velocity;
@@ -80,12 +80,12 @@ impl Model for ThreeDof {
     }
 }
 impl ThreeDof{
-    fn inertial_to_body(&self) -> Rotation3<f64> {
+    fn inertial_to_body(&self) -> Matrix3<f64> {
 
         let roll:f64 = self.state.inertial_frame_angle.x;
         let pitch:f64 = self.state.inertial_frame_angle.y;
         let yaw:f64 = self.state.inertial_frame_angle.z;
-        /*
+
         let R_roll:Matrix3<f64> = Matrix3::new(
             1.0, 0.0, 0.0,
             0.0, f64::cos(roll), f64::sin(roll),
@@ -103,9 +103,10 @@ impl ThreeDof{
             -f64::sin(yaw), f64::cos(yaw), 0.0,
             0.0, 0.0, 1.0
         );
-        */
-        let rot:Rotation3<f64> = Rotation3::new(self.state.inertial_frame_angle);
-        return rot;
+
+        //let rot:Rotation3<f64> = Rotation3::new(self.state.inertial_frame_angle);
+        //return rot;
+        return R_roll * R_pitch * R_yaw
     }
 }
 
