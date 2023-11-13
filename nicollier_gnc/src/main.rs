@@ -4,7 +4,6 @@ mod guidance;
 
 use std::error::Error;
 use csv::Writer;
-use std::fs::File;
 use std::io::prelude::*;
 use crate::controller::p_controller::PController;
 use crate::controller::Controller;
@@ -51,11 +50,14 @@ impl Reference {
 
 }
 fn main() -> Result<()> {
+    /*
     let mut position_writer = Writer::from_path("pos.csv")?;
     let mut deflection_writer = Writer::from_path("def.csv")?;
     let mut reference_writer = Writer::from_path("ref.csv")?;
     let mut yaw_writer = Writer::from_path("yaw.csv")?;
 
+     */
+    let mut writer = Writer::from_path("all.csv")?;
 
 
     let delta_t = 0.01;
@@ -87,15 +89,24 @@ fn main() -> Result<()> {
         let control_inputs = controller.step(model.get_state(), reference, delta_t);
         let updated_state = model.step(control_inputs, delta_t);
 
-        deflection_writer.write_record(&[control_inputs.asym.to_string()])?;
-        reference_writer.write_record(&[reference.0.to_string()])?;
-        yaw_writer.write_record(&[updated_state.inertial_frame_angle.z.to_string()])?;
-        position_writer.write_record(&[updated_state.inertial_frame_position.x.to_string(),updated_state.inertial_frame_position.y.to_string(), (-updated_state.inertial_frame_position.z).to_string()])?;
+        writer.write_record(
+    &[
+                model.get_state().total_time.to_string(),
+                control_inputs.asym.to_string(),
+                reference.0.to_string(),
+                updated_state.inertial_frame_angle.z.to_string(),
+                updated_state.inertial_frame_position.x.to_string(),
+                updated_state.inertial_frame_position.y.to_string(),
+                updated_state.inertial_frame_position.z.to_string()
+            ])?;
     }
+    /*
     position_writer.flush()?;
     deflection_writer.flush()?;
     reference_writer.flush()?;
     yaw_writer.flush()?;
+     */
+    writer.flush()?;
 
     Ok(())
 }

@@ -1,8 +1,5 @@
 pub mod three_dof;
 
-use std::todo;
-use nalgebra::{Rotation3, Vector3};
-use crate::{Deflections, SystemState};
 
 pub trait Model {
     type State;

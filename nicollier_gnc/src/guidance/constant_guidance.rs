@@ -1,5 +1,4 @@
-use std::f32::consts::PI;
-use nalgebra::{Rotation2, Vector2, Vector3};
+use nalgebra::{Rotation2, Vector2};
 use crate::guidance::Guidance;
 use crate::{Reference, SystemState};
 

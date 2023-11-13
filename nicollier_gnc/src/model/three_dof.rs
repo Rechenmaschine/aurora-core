@@ -1,8 +1,7 @@
 //this is Manu's first comment ever here
 use crate::model::Model;
 use crate::{Deflections, SystemState};
-use nalgebra::{Matrix3, Rotation3, Vector2};
-use std::alloc::System;
+use nalgebra::{Rotation3, Vector2};
 
 pub struct ThreeDof {
     state: SystemState,
@@ -61,7 +60,7 @@ impl Model for ThreeDof {
         self.state.inertial_frame_angle.y = 0.0;
         self.state.inertial_frame_angle.z += delta_t * self.state.inertial_frame_angle_velocity.z;
 
-        let rotation: Matrix3<f64> = self.inertial_to_body();
+        let rotation = self.inertial_to_body();
 
 //yakimenko-2015, 5.9
         self.state.body_frame_velocity = rotation * self.state.inertial_frame_velocity;
@@ -80,8 +79,8 @@ impl Model for ThreeDof {
     }
 }
 impl ThreeDof{
-    fn inertial_to_body(&self) -> Matrix3<f64> {
-
+    fn inertial_to_body(&self) -> Rotation3<f64> {
+/*
         let roll:f64 = self.state.inertial_frame_angle.x;
         let pitch:f64 = self.state.inertial_frame_angle.y;
         let yaw:f64 = self.state.inertial_frame_angle.z;
@@ -103,10 +102,10 @@ impl ThreeDof{
             -f64::sin(yaw), f64::cos(yaw), 0.0,
             0.0, 0.0, 1.0
         );
-
-        //let rot:Rotation3<f64> = Rotation3::new(self.state.inertial_frame_angle);
-        //return rot;
-        return R_roll * R_pitch * R_yaw
+*/
+        let rot:Rotation3<f64> = Rotation3::new(self.state.inertial_frame_angle);
+        return rot;
+        //return R_roll * R_pitch * R_yaw
     }
 }
 
