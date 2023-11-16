@@ -1,12 +1,14 @@
 mod camera_controller;
 pub mod coordinate_systems;
 mod terrain;
+mod trajectory;
 
 use crate::camera_controller::{camera_controller, CameraController};
 use crate::coordinate_systems::{enu_to_engine, CAMERA_START_IN_ENU, CAMERA_START_TARGET_POS};
 use crate::terrain::TerrainLoaderPlugin;
 use bevy::{core_pipeline::tonemapping::Tonemapping, prelude::*};
 use std::hash::{Hash, Hasher};
+use crate::trajectory::TrajectoryViewerPlugin;
 
 fn setup_scene(
     mut commands: Commands,
@@ -37,7 +39,7 @@ fn setup_scene(
 
 fn main() {
     App::new()
-        .add_plugins((DefaultPlugins, TerrainLoaderPlugin))
+        .add_plugins((DefaultPlugins, TerrainLoaderPlugin, TrajectoryViewerPlugin))
         .add_systems(Startup, setup_scene)
         .add_systems(Update, camera_controller)
         .run();
