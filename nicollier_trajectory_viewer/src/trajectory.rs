@@ -1,9 +1,9 @@
+use crate::coordinate_systems::ned_to_engine;
+use bevy::prelude::shape::Cylinder;
+use bevy::prelude::*;
+use bevy::utils::synccell::SyncCell;
 use std::sync::mpsc::Receiver;
 use std::thread;
-use bevy::prelude::*;
-use bevy::prelude::shape::Cylinder;
-use bevy::utils::synccell::SyncCell;
-use crate::coordinate_systems::ned_to_engine;
 
 static TRAJ_SEGMENT_RADIUS: f32 = 1.0;
 
@@ -34,13 +34,13 @@ fn create_trajectory_segment(start_coords: Vec3, end_coords: Vec3) -> Transform 
 struct TrajectoryViewerResources {
     material: Handle<StandardMaterial>,
     mesh: Handle<Mesh>,
-    new_segment_queue: SyncCell<Receiver<(Vec3, Vec3)>>
+    new_segment_queue: SyncCell<Receiver<(Vec3, Vec3)>>,
 }
 
 fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let material = materials.add(StandardMaterial {
         base_color: Color::RED,
@@ -49,12 +49,15 @@ fn setup(
         ..default()
     });
 
-    let mesh = meshes.add(Cylinder {
-        radius: 1.0,
-        height: 1.0,
-        resolution: 8,
-        segments: 4,
-    }.into());
+    let mesh = meshes.add(
+        Cylinder {
+            radius: 1.0,
+            height: 1.0,
+            resolution: 8,
+            segments: 4,
+        }
+        .into(),
+    );
 
     let (send, recv) = std::sync::mpsc::channel();
 
@@ -67,14 +70,11 @@ fn setup(
     commands.insert_resource(TrajectoryViewerResources {
         material,
         mesh,
-        new_segment_queue: SyncCell::new(recv)
+        new_segment_queue: SyncCell::new(recv),
     })
 }
 
-fn update_trajectory(
-    mut commands: Commands,
-    mut traj_assets: ResMut<TrajectoryViewerResources>
-) {
+fn update_trajectory(mut commands: Commands, mut traj_assets: ResMut<TrajectoryViewerResources>) {
     let mesh = traj_assets.mesh.clone();
     let material = traj_assets.material.clone();
 
@@ -90,8 +90,7 @@ fn update_trajectory(
 
 impl Plugin for TrajectoryViewerPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_systems(Startup, setup)
+        app.add_systems(Startup, setup)
             .add_systems(Update, update_trajectory);
     }
 }
