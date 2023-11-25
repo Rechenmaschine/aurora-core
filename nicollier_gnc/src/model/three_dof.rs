@@ -20,9 +20,9 @@ impl ThreeDof {
             wind: Vector2::new(0.0, 0.0), // No wind by default
         }
     }
-    pub fn set_wind(&mut self, wind: Vector2<f64>) {
+    /*pub fn set_wind(&mut self, wind: Vector2<f64>) {
         self.wind = wind;
-    }
+    }*/
 }
 
 impl Model for ThreeDof {
