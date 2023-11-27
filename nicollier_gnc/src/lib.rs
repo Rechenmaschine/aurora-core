@@ -2,11 +2,15 @@ pub mod controller;
 pub mod guidance;
 pub mod model;
 
-use crate::controller::Controller;
-use crate::guidance::Guidance;
-use crate::model::Model;
 use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
+
+use crate::controller::p_controller::PController;
+use crate::controller::Controller;
+use crate::guidance::double_wall::DoubleWallGuidance;
+use crate::guidance::Guidance;
+use crate::model::three_dof::ThreeDof;
+use crate::model::Model;
 
 #[derive(Copy, Clone, Debug, Serialize)]
 pub struct SystemState {
@@ -55,3 +59,35 @@ pub struct Deflections {
 
 #[derive(Copy, Clone, Debug)]
 pub struct Reference(pub f64);
+
+pub struct Simulation {
+    pub guidance: DoubleWallGuidance,
+    pub controller: PController,
+    pub model: ThreeDof,
+}
+
+impl Simulation {
+    pub fn new() -> Self {
+        Self {
+            guidance: DoubleWallGuidance::new(60.0, 10.0, 5.0, 100.0, 0.5),
+            controller: PController::new(),
+            model: ThreeDof::new(SystemState::initial_state()),
+        }
+    }
+
+    pub fn step(&mut self) -> (SystemState, Reference, Deflections, SystemState) {
+        let delta_t = 0.01;
+
+        let state = self.model.get_state();
+        let reference = self.guidance.get_reference(state);
+        let control_inputs = self.controller.step(state, reference, delta_t);
+
+        let new_state = self.model.step(control_inputs, delta_t);
+
+        (state, reference, control_inputs, new_state)
+    }
+
+    pub fn done(&self) -> bool {
+        self.model.landed()
+    }
+}
