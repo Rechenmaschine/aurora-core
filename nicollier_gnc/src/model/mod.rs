@@ -1,6 +1,5 @@
 pub mod three_dof;
 
-
 pub trait Model {
     type State;
     type Input;

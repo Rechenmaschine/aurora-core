@@ -1,19 +1,18 @@
-use std::error::Error;
+use anyhow::Result;
 use csv::Writer;
-use std::io::prelude::*;
+use nalgebra::Vector3;
 use nicollier_gnc::controller::p_controller::PController;
 use nicollier_gnc::controller::Controller;
 use nicollier_gnc::guidance::double_wall::DoubleWallGuidance;
 use nicollier_gnc::guidance::Guidance;
 use nicollier_gnc::model::three_dof::ThreeDof;
 use nicollier_gnc::model::Model;
-use serde::{Serialize, Deserialize};
-use nalgebra::{Vector3};
-use anyhow::Result;
+use serde::{Deserialize, Serialize};
+use std::error::Error;
+use std::io::prelude::*;
 use std::ops::{Deref, DerefMut};
 
-
-use nicollier_gnc::{SystemState, Deflections, Reference};
+use nicollier_gnc::{Deflections, Reference, SystemState};
 
 fn main() -> Result<()> {
     /*
@@ -33,33 +32,27 @@ fn main() -> Result<()> {
 
     //let mut guidance = ConstantGuidance::new(Reference(0.0));
     //let mut guidance = ConstantYawGuidance::new(constant_yaw_angle);//my const guidance
-    let mut guidance = DoubleWallGuidance::new(
-        60.0,
-        10.0,
-        5.0,
-        100.0,
-        0.5
-    );
+    let mut guidance = DoubleWallGuidance::new(60.0, 10.0, 5.0, 100.0, 0.5);
     let mut controller = PController::new();
     let mut model = ThreeDof::new(initial_state);
 
-    while !model.landed() /*&& model.get_state().total_time<1000.0*/ {
-
+    while !model.landed()
+    /*&& model.get_state().total_time<1000.0*/
+    {
         let state = model.get_state();
         let reference = guidance.get_reference(state);
         let control_inputs = controller.step(model.get_state(), reference, delta_t);
         let updated_state = model.step(control_inputs, delta_t);
 
-        writer.write_record(
-    &[
-                model.get_state().total_time.to_string(),
-                control_inputs.asym.to_string(),
-                reference.0.to_string(),
-                updated_state.inertial_frame_angle.z.to_string(),
-                updated_state.inertial_frame_position.x.to_string(),
-                updated_state.inertial_frame_position.y.to_string(),
-        (-updated_state.inertial_frame_position.z).to_string()
-            ])?;
+        writer.write_record(&[
+            model.get_state().total_time.to_string(),
+            control_inputs.asym.to_string(),
+            reference.0.to_string(),
+            updated_state.inertial_frame_angle.z.to_string(),
+            updated_state.inertial_frame_position.x.to_string(),
+            updated_state.inertial_frame_position.y.to_string(),
+            (-updated_state.inertial_frame_position.z).to_string(),
+        ])?;
     }
     /*
     position_writer.flush()?;
@@ -71,8 +64,6 @@ fn main() -> Result<()> {
 
     Ok(())
 }
-
-
 
 //future tests
 #[cfg(test)]

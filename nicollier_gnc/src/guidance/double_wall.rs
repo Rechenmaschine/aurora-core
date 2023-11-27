@@ -1,6 +1,5 @@
-use crate::{Reference, SystemState};
 use crate::guidance::Guidance;
-
+use crate::{Reference, SystemState};
 
 pub struct DoubleWallGuidance {
     nod_rate: f64,
@@ -17,7 +16,13 @@ pub struct DoubleWallGuidance {
 }
 
 impl DoubleWallGuidance {
-    pub fn new(nod_rate: f64, ramp_time: f64, stabilization_time: f64, braking_height: f64, steady_sym_def: f64) -> Self {
+    pub fn new(
+        nod_rate: f64,
+        ramp_time: f64,
+        stabilization_time: f64,
+        braking_height: f64,
+        steady_sym_def: f64,
+    ) -> Self {
         Self {
             nod_rate,
             yaw_reference: 0.0,
@@ -31,7 +36,6 @@ impl DoubleWallGuidance {
             steady_sym_def,
         }
     }
-
 
     fn generate_yaw_ramp(&mut self) {
         let yaw_tolerance = std::f64::consts::PI / (self.nod_rate * self.ramp_time);
@@ -68,7 +72,6 @@ impl DoubleWallGuidance {
     fn target_wall_west(&mut self) {
         self.yaw_reference = -std::f64::consts::FRAC_PI_2;
     }
-
 }
 
 pub enum TargetWall {
@@ -104,32 +107,30 @@ impl Guidance for DoubleWallGuidance {
                     self.target_wall_south();
                     println!("Switching to South wall");
                 }
-            },
+            }
             TargetWall::South => {
                 if state.inertial_frame_position.y >= 0.0 {
                     self.target_wall = TargetWall::North;
                     self.target_wall_north();
                     println!("Switching to North wall");
                 }
-            },
+            }
             TargetWall::East => {
                 if state.inertial_frame_position.x <= 0.0 {
                     self.target_wall = TargetWall::West;
                     self.target_wall_west();
                     println!("Switching to West wall");
                 }
-            },
+            }
             TargetWall::West => {
                 if state.inertial_frame_position.x >= 0.0 {
                     self.target_wall = TargetWall::East;
                     self.target_wall_east();
                     println!("Switching to East wall");
                 }
-            },
+            }
         }
-
 
         Reference(self.yaw_reference)
     }
 }
-

@@ -1,9 +1,7 @@
-
 pub mod constant_guidance;
 
 pub mod constant_yaw;
 pub mod double_wall;
-
 
 pub trait Guidance {
     type State;

@@ -2,17 +2,17 @@ use crate::coordinate_systems::ned_to_engine;
 use bevy::prelude::shape::Cylinder;
 use bevy::prelude::*;
 use bevy::utils::synccell::SyncCell;
+use nicollier_gnc::controller::p_controller::PController;
+use nicollier_gnc::controller::Controller;
+use nicollier_gnc::guidance::constant_guidance::ConstantGuidance;
+use nicollier_gnc::guidance::double_wall::DoubleWallGuidance;
+use nicollier_gnc::guidance::Guidance;
+use nicollier_gnc::model::three_dof::ThreeDof;
+use nicollier_gnc::model::Model;
+use nicollier_gnc::Reference;
+use nicollier_gnc::SystemState;
 use std::sync::mpsc::Receiver;
 use std::thread;
-use nicollier_gnc::SystemState;
-use nicollier_gnc::guidance::double_wall::DoubleWallGuidance;
-use nicollier_gnc::model::three_dof::ThreeDof;
-use nicollier_gnc::controller::p_controller::PController;
-use nicollier_gnc::model::Model;
-use nicollier_gnc::controller::Controller;
-use nicollier_gnc::guidance::Guidance;
-use nicollier_gnc::guidance::constant_guidance::ConstantGuidance;
-use nicollier_gnc::Reference;
 
 static TRAJ_SEGMENT_RADIUS: f32 = 1.0;
 
@@ -71,7 +71,6 @@ fn setup(
     let (send, recv) = std::sync::mpsc::channel();
 
     thread::spawn(move || {
-
         let delta_t = 0.01;
 
         let initial_state = SystemState::initial_state();
@@ -97,9 +96,11 @@ fn setup(
             let old_pos = state.inertial_frame_position;
             let new_pos = updated_state.inertial_frame_position;
 
-            send.send((Vec3::new(old_pos.x as f32, old_pos.y as f32, old_pos.z as f32),
-                       Vec3::new(new_pos.x as f32, new_pos.y as f32, new_pos.z as f32)))
-                .expect("Failed to send data for new trajectory segment");
+            send.send((
+                Vec3::new(old_pos.x as f32, old_pos.y as f32, old_pos.z as f32),
+                Vec3::new(new_pos.x as f32, new_pos.y as f32, new_pos.z as f32),
+            ))
+            .expect("Failed to send data for new trajectory segment");
         }
     });
 
