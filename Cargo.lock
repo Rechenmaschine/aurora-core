@@ -2413,6 +2413,7 @@ dependencies = [
  "anyhow",
  "bevy",
  "csv",
+ "nalgebra",
  "nicollier_gnc",
  "ordered-float",
  "serde",

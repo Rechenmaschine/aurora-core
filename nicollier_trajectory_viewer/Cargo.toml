@@ -16,3 +16,4 @@ anyhow = "1.0"
 ordered-float = "4.1"
 alloc-track = { version = "0.3.0", optional = true }
 nicollier_gnc = {path = "../nicollier_gnc"}
+nalgebra = "0.32"

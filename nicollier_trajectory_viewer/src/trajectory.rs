@@ -1,18 +1,14 @@
 use crate::coordinate_systems::ned_to_engine;
+
 use bevy::prelude::shape::Cylinder;
 use bevy::prelude::*;
 use bevy::utils::synccell::SyncCell;
-use nicollier_gnc::controller::p_controller::PController;
-use nicollier_gnc::controller::Controller;
-use nicollier_gnc::guidance::constant_guidance::ConstantGuidance;
-use nicollier_gnc::guidance::double_wall::DoubleWallGuidance;
-use nicollier_gnc::guidance::Guidance;
-use nicollier_gnc::model::three_dof::ThreeDof;
-use nicollier_gnc::model::Model;
-use nicollier_gnc::Reference;
-use nicollier_gnc::SystemState;
+use nalgebra::Vector3;
+
 use std::sync::mpsc::Receiver;
 use std::thread;
+
+use nicollier_gnc::Simulation;
 
 static TRAJ_SEGMENT_RADIUS: f32 = 1.0;
 
@@ -71,34 +67,19 @@ fn setup(
     let (send, recv) = std::sync::mpsc::channel();
 
     thread::spawn(move || {
-        let delta_t = 0.01;
+        let mut sim = Simulation::new();
 
-        let initial_state = SystemState::initial_state();
-
-        let mut guidance = ConstantGuidance::new(Reference(0.0));
-        //let mut guidance = ConstantYawGuidance::new(constant_yaw_angle);//my const guidance
-        // let mut guidance = DoubleWallGuidance::new(
-        //     60.0,
-        //     10.0,
-        //     5.0,
-        //     100.0,
-        //     0.5
-        // );
-        let mut controller = PController::new();
-        let mut model = ThreeDof::new(initial_state);
-
-        while !model.landed() {
-            let state = model.get_state();
-            let reference = guidance.get_reference(state);
-            let control_inputs = controller.step(model.get_state(), reference, delta_t);
-            let updated_state = model.step(control_inputs, delta_t);
+        while !sim.done() {
+            let (state, _, _, updated_state) = sim.step();
 
             let old_pos = state.inertial_frame_position;
             let new_pos = updated_state.inertial_frame_position;
 
+            let vector_conv = |v: Vector3<f64>| {Vec3::new(v.x as f32, v.y as f32, v.z as f32)};
+
             send.send((
-                Vec3::new(old_pos.x as f32, old_pos.y as f32, old_pos.z as f32),
-                Vec3::new(new_pos.x as f32, new_pos.y as f32, new_pos.z as f32),
+                vector_conv(old_pos),
+                vector_conv(new_pos),
             ))
             .expect("Failed to send data for new trajectory segment");
         }
