@@ -13,6 +13,10 @@ pub struct DoubleWallGuidance {
     stabilization_time: f64,
     braking_height: f64,
     steady_sym_def: f64,
+    north_wall_x: f64,
+    south_wall_x: f64,
+    east_wall_y: f64,
+    west_wall_y: f64,
 }
 
 impl DoubleWallGuidance {
@@ -25,15 +29,19 @@ impl DoubleWallGuidance {
     ) -> Self {
         Self {
             nod_rate,
-            yaw_reference: 0.0,
+            yaw_reference: std::f64::consts::FRAC_PI_2 - std::f64::consts::PI / 16.0,
             yaw_previous: 0.0,
             sym_deflection: 0.0,
             sym_deflection_previous: 0.0,
-            target_wall: TargetWall::North,
+            target_wall: TargetWall::East,
             ramp_time,
             stabilization_time,
             braking_height,
             steady_sym_def,
+            north_wall_x: 100.0,
+            south_wall_x:-100.0,
+            east_wall_y:100.0,
+            west_wall_y:-100.0
         }
     }
 
@@ -58,7 +66,7 @@ impl DoubleWallGuidance {
     }
 
     fn target_wall_north(&mut self) {
-        self.yaw_reference = 0.0 - std::f64::consts::PI / 16.0;
+        self.yaw_reference =  std::f64::consts::PI / 4.0;
     }
 
     fn target_wall_south(&mut self) {
@@ -66,14 +74,13 @@ impl DoubleWallGuidance {
     }
 
     fn target_wall_east(&mut self) {
-        self.yaw_reference = std::f64::consts::FRAC_PI_2;
+        self.yaw_reference = std::f64::consts::FRAC_PI_2 - std::f64::consts::PI / 16.0;
     }
 
     fn target_wall_west(&mut self) {
-        self.yaw_reference = -std::f64::consts::FRAC_PI_2;
+        self.yaw_reference = std::f64::consts::PI+std::f64::consts::FRAC_PI_2 + std::f64::consts::PI / 16.0;
     }
 }
-
 pub enum TargetWall {
     North,
     South,
@@ -98,32 +105,31 @@ impl Guidance for DoubleWallGuidance {
         }*/
         // Normal guidance phase
         self.sym_deflection = self.steady_sym_def;
-
         // Wall targeting logic
         match self.target_wall {
             TargetWall::North => {
-                if state.inertial_frame_position.y <= 0.0 {
+                if state.inertial_frame_position.x >= self.north_wall_x {
                     self.target_wall = TargetWall::South;
                     self.target_wall_south();
                     println!("Switching to South wall");
                 }
             }
             TargetWall::South => {
-                if state.inertial_frame_position.y >= 0.0 {
+                if state.inertial_frame_position.x <= self.south_wall_x {
                     self.target_wall = TargetWall::North;
                     self.target_wall_north();
                     println!("Switching to North wall");
                 }
             }
             TargetWall::East => {
-                if state.inertial_frame_position.x <= 0.0 {
+                if state.inertial_frame_position.y >= self.east_wall_y {
                     self.target_wall = TargetWall::West;
                     self.target_wall_west();
                     println!("Switching to West wall");
                 }
             }
             TargetWall::West => {
-                if state.inertial_frame_position.x >= 0.0 {
+                if state.inertial_frame_position.y <= self.west_wall_y {
                     self.target_wall = TargetWall::East;
                     self.target_wall_east();
                     println!("Switching to East wall");

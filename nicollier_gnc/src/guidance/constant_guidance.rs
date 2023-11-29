@@ -10,7 +10,7 @@ impl ConstantGuidance {
     }
 }
 
-const TARGET: Vector2<f64> = Vector2::new(100.0, 100.0);
+const TARGET: Vector2<f64> = Vector2::new(0.0, 0.0);
 
 impl Guidance for ConstantGuidance {
     type State = SystemState;
