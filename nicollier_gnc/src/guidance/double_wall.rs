@@ -66,7 +66,7 @@ impl DoubleWallGuidance {
     }
 
     fn target_wall_north(&mut self) {
-        self.yaw_reference =  std::f64::consts::PI / 4.0;
+        self.yaw_reference =  std::f64::consts::PI / 16.0;
     }
 
     fn target_wall_south(&mut self) {
