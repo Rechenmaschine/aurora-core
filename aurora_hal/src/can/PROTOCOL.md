@@ -43,7 +43,7 @@ In addition to its classification as Data Producer or Data Consumer, each Endpoi
 (the "Endpoint ID") and its "Endpoint Type" which governs the format of the payload produced or consumed by the endpoint.
 
 Endpoint IDs are assigned by the Flight Computer on Startup using the Endpoint Discovery and 
-Negotiation Process described below. The Aurora CAN protocol allows up to 2^10 = 65536 different Endpoint IDs on a 
+Negotiation Process described below. The Aurora CAN protocol allows up to 2^10 = 1024 different Endpoint IDs on a 
 single bus.
 
 ## Data Messages
@@ -63,7 +63,7 @@ them and to broadcast SMMs.
 
 The SMM payload is structured as follows (from MSB to LSB):
 1. 10-bit peripheral identifier of the transmitting unit
-2. 6-bit SMM payload length in bytes (excluding the two bytes containing identifier and length)
+2. 6-bit SMM payload length in bytes (excluding the two bytes containing peripheral identifier and length)
 3. 8-bit SMM payload type identifier (PTI)
 4. Payload data according to payload type identifier
 

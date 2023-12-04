@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 event_gen = { path = "../event_gen" }
+arrayvec = "0.7"
