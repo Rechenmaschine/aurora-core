@@ -53,7 +53,7 @@ impl EndpointInfo {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum EndpointType {
     Unknown,
 }
@@ -64,6 +64,14 @@ impl From<u32> for EndpointType {
             _ => EndpointType::Unknown,
         }
     }
+}
+
+pub trait EndpointConfig {
+    fn get_fixed_ident(&self) -> (u16, u16);
+
+    fn get_endpoint_type(&self) -> EndpointType;
+
+    fn configure(&self, iface: &mut dyn CANInterface, info: &EndpointInfo) {}
 }
 
 impl AuroraBus {
@@ -94,19 +102,26 @@ impl AuroraBus {
         }
     }
 
-    pub fn enable_endpoint(
-        &mut self,
-        peripheral_id: u16,
-        sequence_no: u16,
-        config_hook: Option<impl FnOnce(&mut dyn CANInterface, &EndpointInfo)>,
-    ) -> Result<EndpointInfo> {
+    pub fn enable_endpoint(&mut self, cfg: &dyn EndpointConfig) -> Result<EndpointInfo> {
+        let (peripheral_id, sequence_no) = cfg.get_fixed_ident();
+
+        if let Some(endpoint) = self.disabled_endpoints.get(&(peripheral_id, sequence_no)) {
+            if endpoint.endpoint_type != cfg.get_endpoint_type() {
+                return Err(anyhow!(
+                    "Endpoint type mismatch: Endpoint {:03x}:{:03x} is of type {:?} but was configured as {:?}",
+                    peripheral_id,
+                    sequence_no,
+                    endpoint.endpoint_type,
+                    cfg.get_endpoint_type()
+                ));
+            }
+        }
+
         if let Some(mut endpoint) = self
             .disabled_endpoints
             .remove(&(peripheral_id, sequence_no))
         {
-            if let Some(config_hook) = config_hook {
-                config_hook(&mut *self.iface, &endpoint);
-            }
+            cfg.configure(&mut *self.iface, &endpoint);
 
             endpoint.endpoint_id = Some(self.enabled_endpoints.len() as u16);
             if endpoint.endpoint_id.unwrap() > 0x3FF {
