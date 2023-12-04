@@ -1,5 +1,9 @@
 use crate::can::protocol::message::{Message, SMMIdent, SMMPayload, SystemManagementMessage};
 use crate::can::CANInterface;
+use anyhow::{anyhow, Result};
+use std::collections::HashMap;
+use std::error::Error;
+use std::fmt::{Display, Formatter};
 use std::time::Duration;
 
 pub mod message;
@@ -8,6 +12,14 @@ pub mod message;
 pub struct ProtocolError {
     msg: String,
 }
+
+impl Display for ProtocolError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.msg)
+    }
+}
+
+impl Error for ProtocolError {}
 
 impl ProtocolError {
     fn new(msg: impl ToString) -> Self {
@@ -19,9 +31,11 @@ impl ProtocolError {
 
 struct AuroraBus {
     iface: Box<dyn CANInterface>,
-    known_endpoints: Vec<EndpointInfo>,
+    enabled_endpoints: HashMap<u16, EndpointInfo>,
+    disabled_endpoints: HashMap<(u16, u16), EndpointInfo>,
 }
 
+#[derive(Debug, Copy, Clone)]
 pub struct EndpointInfo {
     peripheral_id: u16,
     sequence_no: u16,
@@ -29,6 +43,17 @@ pub struct EndpointInfo {
     endpoint_type: EndpointType,
 }
 
+impl EndpointInfo {
+    pub fn get_fixed_ident(&self) -> (u16, u16) {
+        (self.peripheral_id, self.sequence_no)
+    }
+
+    pub fn get_type(&self) -> EndpointType {
+        self.endpoint_type
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
 pub enum EndpointType {
     Unknown,
 }
@@ -43,22 +68,105 @@ impl From<u32> for EndpointType {
 
 impl AuroraBus {
     pub fn new(iface: impl CANInterface + 'static) -> Self {
-        Self {
+        let mut bus = Self {
             iface: Box::new(iface),
-            known_endpoints: Vec::new(),
-        }
+            enabled_endpoints: HashMap::new(),
+            disabled_endpoints: HashMap::new(),
+        };
+
+        bus.initialize();
+
+        bus
     }
 
-    pub fn initialize(&mut self) {
+    fn initialize(&mut self) {
         // Reset all peripherals
         self.broadcast_reset();
 
         std::thread::sleep(Duration::from_secs(2));
 
         // Enumerate endpoints on the bus
-        self.known_endpoints = self.enumerate_endpoints(Duration::from_secs_f64(0.1));
+        let endpoints = self.enumerate_endpoints(Duration::from_secs_f64(0.1));
 
-        // TODO: Configure endpoints and assign endpoint IDs
+        for e in endpoints {
+            self.disabled_endpoints
+                .insert((e.peripheral_id, e.sequence_no), e);
+        }
+    }
+
+    pub fn enable_endpoint(
+        &mut self,
+        peripheral_id: u16,
+        sequence_no: u16,
+        config_hook: Option<impl FnOnce(&mut dyn CANInterface, &EndpointInfo)>,
+    ) -> Result<EndpointInfo> {
+        if let Some(mut endpoint) = self
+            .disabled_endpoints
+            .remove(&(peripheral_id, sequence_no))
+        {
+            if let Some(config_hook) = config_hook {
+                config_hook(&mut *self.iface, &endpoint);
+            }
+
+            endpoint.endpoint_id = Some(self.enabled_endpoints.len() as u16);
+            if endpoint.endpoint_id.unwrap() > 0x3FF {
+                return Err(anyhow!(
+                    "Failed to enable endpoint {:?}: Too many endpoints enabled",
+                    endpoint
+                ));
+            }
+            self.enabled_endpoints
+                .insert(endpoint.endpoint_id.unwrap(), endpoint);
+
+            let enable_msg = Message::new_system_management(
+                endpoint.peripheral_id.try_into()?,
+                SMMIdent::FlightComputer,
+                SMMPayload::EndpointEnable {
+                    endpoint_seq_no: endpoint.sequence_no,
+                    endpoint_id: endpoint.endpoint_id.unwrap(),
+                },
+            );
+
+            self.iface.send(enable_msg.into());
+
+            return Ok(endpoint);
+        }
+
+        Err(anyhow!(
+            "No endpoint found at {:03x}:{:03x}",
+            peripheral_id,
+            sequence_no
+        ))
+    }
+
+    pub fn disable_endpoint(&mut self, endpoint_id: u16) -> Result<()> {
+        if let Some(mut endpoint) = self.enabled_endpoints.remove(&endpoint_id) {
+            endpoint.endpoint_id = None;
+
+            self.disabled_endpoints
+                .insert((endpoint.peripheral_id, endpoint.sequence_no), endpoint);
+
+            let disable_msg = Message::new_system_management(
+                endpoint.peripheral_id.try_into()?,
+                SMMIdent::FlightComputer,
+                SMMPayload::EndpointDisable {
+                    endpoint_seq_no: endpoint.sequence_no,
+                },
+            );
+
+            self.iface.send(disable_msg.into());
+
+            Ok(())
+        } else {
+            Err(anyhow!(
+                "No endpoint currently enabled with endpoint ID {:03x}",
+                endpoint_id
+            ))
+        }
+    }
+
+    pub fn get_available_endpoints(&self) -> &HashMap<(u16, u16), EndpointInfo> {
+        &self.disabled_endpoints
     }
 
     fn broadcast_reset(&mut self) {
