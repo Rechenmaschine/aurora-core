@@ -4,6 +4,7 @@ use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
+use std::mem;
 use std::time::Duration;
 
 pub mod message;
@@ -54,15 +55,28 @@ impl EndpointInfo {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[repr(u32)]
 pub enum EndpointType {
-    Unknown,
+    // SAFETY: EndpointType MUST be a unit-only enum (i.e. all variants must have no fields)
+    // for the conversion from u32 to be working correctly
+    Unknown, // Must be the only non-explict element in the enum
 }
 
 impl From<u32> for EndpointType {
     fn from(value: u32) -> Self {
-        match value {
-            _ => EndpointType::Unknown,
+        if value < mem::variant_count::<EndpointType>() as u32 {
+            // SAFETY: value is less than the number of variants of EndpointType and thus represents a valid discriminant
+            // The cast is only safe if EndpointType is a unit-only enum (i.e. none of the variants have fields
+            unsafe {std::mem::transmute(value)}
+        } else {
+            EndpointType::Unknown
         }
+    }
+}
+
+impl From<EndpointType> for u32 {
+    fn from(value: EndpointType) -> Self {
+        value as u32
     }
 }
 
