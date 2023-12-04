@@ -12,7 +12,7 @@ pub struct ProtocolError {
 impl ProtocolError {
     fn new(msg: impl ToString) -> Self {
         Self {
-            msg: msg.to_string()
+            msg: msg.to_string(),
         }
     }
 }

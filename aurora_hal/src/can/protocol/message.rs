@@ -1,7 +1,7 @@
-use std::str::FromStr;
 use crate::can::protocol::ProtocolError;
 use crate::can::{CANFDFrame, CANFDPayload};
 use arrayvec::ArrayString;
+use std::str::FromStr;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Message {
@@ -51,26 +51,32 @@ impl TryFrom<CANFDFrame> for Message {
 
                 match frame.payload.len() {
                     3.. => {
-                        let payload_header = u16::from_be_bytes(frame.payload[..2].try_into().unwrap());
+                        let payload_header =
+                            u16::from_be_bytes(frame.payload[..2].try_into().unwrap());
                         let transmit_id = payload_header >> 6;
                         let payload_length = payload_header & 0b0011_1111;
                         let payload_type_ident = frame.payload[2];
 
                         if frame.payload.len() < 2 + payload_length as usize {
-                            return Err(ProtocolError::new("Failed SMM decode: Invalid payload length mismatch"));
+                            return Err(ProtocolError::new(
+                                "Failed SMM decode: Invalid payload length mismatch",
+                            ));
                         }
 
-                        let payload = SMMPayload::decode(payload_type_ident, &frame.payload[3..(2+payload_length as usize)])?;
+                        let payload = SMMPayload::decode(
+                            payload_type_ident,
+                            &frame.payload[3..(2 + payload_length as usize)],
+                        )?;
 
                         Ok(Self::new_system_management(
                             recv_id.try_into()?,
                             transmit_id.try_into()?,
-                            payload
+                            payload,
                         ))
                     }
-                    _ => {
-                        Err(ProtocolError::new("Invalid payload length for a system management message"))
-                    }
+                    _ => Err(ProtocolError::new(
+                        "Invalid payload length for a system management message",
+                    )),
                 }
             }
             0x400..=0x7FF => {
@@ -80,9 +86,7 @@ impl TryFrom<CANFDFrame> for Message {
                     payload: frame.payload,
                 }))
             }
-            _ => {
-                Err(ProtocolError::new("Invalid CAN ID"))
-            }
+            _ => Err(ProtocolError::new("Invalid CAN ID")),
         }
     }
 }
@@ -141,18 +145,10 @@ impl TryFrom<u16> for SMMIdent {
 
     fn try_from(value: u16) -> Result<Self, Self::Error> {
         match value {
-            0 => {
-                Ok(Self::FlightComputer)
-            }
-            0x3FF => {
-                Ok(Self::Broadcast)
-            }
-            1..=0x3FE => {
-                Ok(Self::Peripheral(value))
-            }
-            _ => {
-                Err(ProtocolError::new("Invalid SMM Identifier"))
-            }
+            0 => Ok(Self::FlightComputer),
+            0x3FF => Ok(Self::Broadcast),
+            1..=0x3FE => Ok(Self::Peripheral(value)),
+            _ => Err(ProtocolError::new("Invalid SMM Identifier")),
         }
     }
 }
@@ -302,7 +298,9 @@ impl SMMPayload {
                 if payload_data.len() == 0 {
                     Ok(SMMPayload::PeripheralReset)
                 } else {
-                    Err(ProtocolError::new("Failed to decode SMM payload: Invalid payload length for Peripheral Reset"))
+                    Err(ProtocolError::new(
+                        "Failed to decode SMM payload: Invalid payload length for Peripheral Reset",
+                    ))
                 }
             }
             0x01 => {
@@ -344,7 +342,9 @@ impl SMMPayload {
                         endpoint_id: u16::from_le_bytes(payload_data[2..].try_into().unwrap()),
                     })
                 } else {
-                    Err(ProtocolError::new("Failed to decode SMM payload: Invalid payload length for Endpoint Enable"))
+                    Err(ProtocolError::new(
+                        "Failed to decode SMM payload: Invalid payload length for Endpoint Enable",
+                    ))
                 }
             }
             0x06 => {
@@ -353,14 +353,16 @@ impl SMMPayload {
                         endpoint_seq_no: u16::from_le_bytes(payload_data[..2].try_into().unwrap()),
                     })
                 } else {
-                    Err(ProtocolError::new("Failed to decode SMM payload: Invalid payload length for Endpoint Disable"))
+                    Err(ProtocolError::new(
+                        "Failed to decode SMM payload: Invalid payload length for Endpoint Disable",
+                    ))
                 }
             }
             0x07 => {
                 if payload_data.len() == 6 {
                     Ok(SMMPayload::EndpointConfigurationReadRequest {
                         endpoint_seq_no: u16::from_le_bytes(payload_data[..2].try_into().unwrap()),
-                        config_item_no: u32::from_le_bytes(payload_data[2..].try_into().unwrap())
+                        config_item_no: u32::from_le_bytes(payload_data[2..].try_into().unwrap()),
                     })
                 } else {
                     Err(ProtocolError::new("Failed to decode SMM payload: Invalid payload length for Endpoint Configuration Read Request"))
@@ -373,7 +375,9 @@ impl SMMPayload {
                         config_item_no: u32::from_le_bytes(payload_data[2..6].try_into().unwrap()),
                         error: payload_data[6] & 0b1000_0000 != 0,
                         has_changed: payload_data[6] & 0b0100_0000 != 0,
-                        config_item_value: u64::from_le_bytes(payload_data[7..].try_into().unwrap())
+                        config_item_value: u64::from_le_bytes(
+                            payload_data[7..].try_into().unwrap(),
+                        ),
                     })
                 } else {
                     Err(ProtocolError::new("Failed to decode SMM payload: Invalid payload length for Endpoint Configuration Read Response"))
@@ -383,8 +387,12 @@ impl SMMPayload {
                 if payload_data.len() == 14 {
                     Ok(SMMPayload::EndpointConfigurationWrite {
                         endpoint_seq_no: u16::from_le_bytes(payload_data[..2].try_into().unwrap()),
-                        config_item_ident: u32::from_le_bytes(payload_data[2..6].try_into().unwrap()),
-                        config_item_value: u64::from_le_bytes(payload_data[6..].try_into().unwrap())
+                        config_item_ident: u32::from_le_bytes(
+                            payload_data[2..6].try_into().unwrap(),
+                        ),
+                        config_item_value: u64::from_le_bytes(
+                            payload_data[6..].try_into().unwrap(),
+                        ),
                     })
                 } else {
                     Err(ProtocolError::new("Failed to decode SMM payload: Invalid payload length for Endpoint Configuration Write"))
@@ -392,33 +400,37 @@ impl SMMPayload {
             }
             0x0A => {
                 if let Some(0x00) = payload_data.last() {
-                    if let Ok(msg) = std::str::from_utf8(&payload_data[..payload_data.len()-1]) {
+                    if let Ok(msg) = std::str::from_utf8(&payload_data[..payload_data.len() - 1]) {
                         if let Ok(msg) = ArrayString::from_str(msg) {
-                            Ok(SMMPayload::PeripheralFaultMessage {
-                                msg
-                            })
+                            Ok(SMMPayload::PeripheralFaultMessage { msg })
                         } else {
-                            Err(ProtocolError::new("Failed to decode SMM payload: Payload too long"))
+                            Err(ProtocolError::new(
+                                "Failed to decode SMM payload: Payload too long",
+                            ))
                         }
                     } else {
-                        Err(ProtocolError::new("Failed to decode SMM payload: Payload not valid UTF-8"))
+                        Err(ProtocolError::new(
+                            "Failed to decode SMM payload: Payload not valid UTF-8",
+                        ))
                     }
                 } else {
-                    Err(ProtocolError::new("Failed to decode SMM payload: Payload not null-terminated"))
+                    Err(ProtocolError::new(
+                        "Failed to decode SMM payload: Payload not null-terminated",
+                    ))
                 }
             }
             0x0B => {
                 if payload_data.len() == 1 {
                     Ok(SMMPayload::PeripheralLocatorSetReset {
-                        locator_on: payload_data[0] != 0
+                        locator_on: payload_data[0] != 0,
                     })
                 } else {
                     Err(ProtocolError::new("Failed to decode SMM payload: Invalid payload length for Peripheral Locator Set/Reset"))
                 }
             }
-            _ => {
-                Err(ProtocolError::new("Failed to decode SMM payload: Unknown Payload Type Identifier"))
-            }
+            _ => Err(ProtocolError::new(
+                "Failed to decode SMM payload: Unknown Payload Type Identifier",
+            )),
         }
     }
 }
