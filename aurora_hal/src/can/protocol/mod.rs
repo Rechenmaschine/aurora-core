@@ -4,7 +4,6 @@ use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use std::mem;
 use std::time::Duration;
 
 pub mod message;
@@ -64,7 +63,10 @@ pub enum EndpointType {
 
 impl From<u32> for EndpointType {
     fn from(value: u32) -> Self {
-        if value < mem::variant_count::<EndpointType>() as u32 {
+        // Ensure EndpointType is repr(u32)
+        assert_eq!(std::mem::size_of::<EndpointType>(), std::mem::size_of::<u32>());
+
+        if value < std::mem::variant_count::<EndpointType>() as u32 {
             // SAFETY: value is less than the number of variants of EndpointType and thus represents a valid discriminant
             // The cast is only safe if EndpointType is a unit-only enum (i.e. none of the variants have fields
             unsafe {std::mem::transmute(value)}
