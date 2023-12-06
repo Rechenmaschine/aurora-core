@@ -45,7 +45,7 @@ impl DoubleWallGuidance {
         }
     }
 
-    fn generate_yaw_ramp(&mut self) {
+    /*fn generate_yaw_ramp(&mut self) {
         let yaw_tolerance = std::f64::consts::PI / (self.nod_rate * self.ramp_time);
         if (self.yaw_reference - self.yaw_previous) > yaw_tolerance {
             self.yaw_reference = self.yaw_previous + yaw_tolerance;
@@ -64,6 +64,8 @@ impl DoubleWallGuidance {
         }
         self.sym_deflection_previous = self.sym_deflection;
     }
+
+     */
 
     fn target_wall_north(&mut self) {
         self.yaw_reference =  std::f64::consts::PI / 16.0;

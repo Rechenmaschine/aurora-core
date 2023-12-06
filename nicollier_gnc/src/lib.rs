@@ -9,6 +9,9 @@ use crate::controller::p_controller::PController;
 use crate::controller::Controller;
 use crate::guidance::double_wall::DoubleWallGuidance;
 use crate::guidance::Guidance;
+use crate::guidance::superior_double_wall::Axis::{X, Y};
+use crate::guidance::superior_double_wall::SuperiorDoubleWallGuidance;
+use crate::model::four_dof::FourDof;
 use crate::model::three_dof::ThreeDof;
 use crate::model::Model;
 
@@ -61,7 +64,7 @@ pub struct Deflections {
 pub struct Reference(pub f64);
 
 pub struct Simulation {
-    pub guidance: DoubleWallGuidance,
+    pub guidance: SuperiorDoubleWallGuidance,
     pub controller: PController,
     pub model: ThreeDof,
 }
@@ -69,7 +72,7 @@ pub struct Simulation {
 impl Simulation {
     pub fn new() -> Self {
         Self {
-            guidance: DoubleWallGuidance::new(60.0, 10.0, 5.0, 100.0, 0.5),
+            guidance: SuperiorDoubleWallGuidance::new(X, -100.0, 100.0),
             controller: PController::new(),
             model: ThreeDof::new(SystemState::initial_state()),
         }
