@@ -57,8 +57,12 @@ impl FourDof {
     }
     fn get_alpha(&self) -> f64 {
         //get alpha, rotation is from inertial to body
-        let body_air_speed = self.state.body_frame_velocity; //+Rotation3::new(self.state.inertial_frame_angle)*self.wind*0; //peri had no wind included, but copilot said it should be included, makes sense because drag and lift depend on airspeed
-        body_air_speed.z.atan2(body_air_speed.x)
+        //let body_air_speed =self.state.body_frame_velocity;//+Rotation3::new(self.state.inertial_frame_angle)*self.wind*0; //peri had no wind included, but copilot said it should be included, makes sense because drag and lift depend on airspeed
+        //body_air_speed.z.atan2(body_air_speed.x)
+        self.state
+            .body_frame_velocity
+            .z
+            .atan2(self.state.body_frame_velocity.x)
     }
     fn get_force(&self, sym_deflections: f64) -> Vector3<f64> {
         //calculate the force vector which is acting on the parachute, unsure
@@ -116,53 +120,52 @@ impl Model for FourDof {
             (K_ROLL * input.asym - self.state.inertial_frame_angle.x) / T_ROLL;
         self.state.inertial_frame_angle_velocity.y = 0.0;
         //self.state.inertial_frame_angle_velocity.z=0.0;
-        if self.state.body_frame_velocity.x * self.state.inertial_frame_angle.x.cos().abs()//this line is not in peri, but otherwise there is a divide by zero, how did peri handle this?, how does this line make any sense?
-            != 0.0
-        {
+        if self.state.body_frame_velocity.x * self.state.inertial_frame_angle.x.cos().abs() > f64::EPSILON{
             self.state.inertial_frame_angle_velocity.z = (1.0 / MASS) * self.get_force(input.sym).y
                 / (self.state.body_frame_velocity.x * self.state.inertial_frame_angle.x.cos())
                 + (self.state.body_frame_velocity.z * self.state.inertial_frame_angle_velocity.x)
-                    / (self.state.body_frame_velocity.x * self.state.inertial_frame_angle.x.cos());
-            //wouldnt it be better to use the intertial frame velocity here?, i didnt quite get this
+                / (self.state.body_frame_velocity.x * self.state.inertial_frame_angle.x.cos()); //wouldnt it be better to use the intertial frame velocity here?, i didnt quite get this
+        }else{
+            println!("the body frame velocity x is {} and roll cos is {}", self.state.body_frame_velocity.x, self.state.inertial_frame_angle.x.cos().abs());
         }
 
-        self.state.inertial_frame_acceleration = Rotation3::new(self.state.inertial_frame_angle)
-            .transpose()
-            * self.state.body_frame_acceleration;
-        //println!("input:{:?},inertial_acceleration{:?}",input,self.state.inertial_frame_acceleration);
-        println!("z:{}", self.state.inertial_frame_position.z);
-        //update angular velocities(inertial frame) //isnt this body frame
-
         //println!("inertial angle velocity z{}",self.state.inertial_frame_angle_velocity.z);
-        println!(
+        /*println!(
             "force:{}, body frame vel.x:{}, body frame vel.z:{}inertial frame angle cos:{}",
             self.get_force(input.sym).y,
             self.state.body_frame_velocity.x,
             self.state.body_frame_velocity.z,
             self.state.inertial_frame_angle.x.cos()
-        );
+        );*/
 
         //integrate accelerations(body frame)
 
         self.state.body_frame_velocity += delta_t * self.state.body_frame_acceleration;
 
+        self.state.inertial_frame_velocity =
+            Rotation3::new(self.state.inertial_frame_angle).transpose() * self.state.body_frame_velocity;
+
         //change frames for velocities, from body to inertial frame,transpose=inverse of rotation matrix, so we are going from body to inertial frame
-        self.state.inertial_frame_velocity = Rotation3::new(self.state.inertial_frame_angle)
-            .transpose()
-            * self.state.body_frame_velocity;
+        //self.state.inertial_frame_velocity = Rotation3::new(self.state.inertial_frame_angle).transpose() * self.state.body_frame_velocity;
         //println!("{}",self.state.inertial_frame_acceleration.z);
         //Integrate Velocities (inertial frame)
         self.state.inertial_frame_position += delta_t * self.state.inertial_frame_velocity;
         //integrate Angular velocities (inertial frame)
         self.state.inertial_frame_angle += delta_t * self.state.inertial_frame_angle_velocity;
+
+        self.state.inertial_frame_angle.x = self.state.inertial_frame_angle.x % (2.0 * std::f64::consts::PI);
+        self.state.inertial_frame_angle.y = self.state.inertial_frame_angle.y % (2.0 * std::f64::consts::PI);
+        self.state.inertial_frame_angle.z = self.state.inertial_frame_angle.z % (2.0 * std::f64::consts::PI);
+
         //we are joining swissloop due to stall(rocket is falling down)
         if self.state.body_frame_velocity.x < 0.02 {
-            //println!("the total forward velocity is lower than 0.02m/s, the speed relative to the wind is {}: we could be joining swissloop due to stall", self.state.body_frame_velocity.dot(&(self.wind - self.state.body_frame_velocity)) / self.state.body_frame_velocity.norm());//unsure if my calculation is correct
+            //println!("the total forward velocity is lower than 0.02m/s, the speed relative to the wind is {}: we could be joining swissloop due to stall", self.state.body_frame_velocity.dot(&(self.wind - self.state.body_frame_velocity)) / self.state.body_frame_velocity.norm());
+            //unsure if my calculation is correct
         }
         //we could be flying hearts or other symbols as our energy phase, would be dope
         //the roll angle almost at 90 degrees, we are doing a flip, wuuuhuuu
         if self.state.inertial_frame_angle.x.cos() < 0.2 {
-            //println!("the roll angle is almost at 90 degrees, the angle relative to the wind is {}: we my be doing a flip, wuuuhuuu", "unknown");
+            //println!("the roll angle is almost at 90 degrees, the angle relative to the wind is {}: we might be doing a flip, wuuuhuuu", "unknown");
         }
         //self.state.inertial_frame_position.z-=10.0;
         self.state.total_time += delta_t;
