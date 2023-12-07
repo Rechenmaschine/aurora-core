@@ -37,10 +37,10 @@ pub struct SystemState {
 impl SystemState {
     pub fn initial_state() -> Self {
         Self {
-            inertial_frame_position: Vector3::new(0.0, 0.0, -1500.0),
+            inertial_frame_position: Vector3::new(0.0, 0.0, -2000.0),
             inertial_frame_velocity: Vector3::zeros(),
             inertial_frame_acceleration: Vector3::zeros(),
-            inertial_frame_angle: Vector3::new(2.0,1.0,1.0),
+            inertial_frame_angle: Vector3::new(4.0,1.0,2.0),
             inertial_frame_angle_velocity: Vector3::zeros(),
             inertial_frame_angle_acceleration: Vector3::zeros(),
 
@@ -72,7 +72,7 @@ pub struct Simulation {
 impl Simulation {
     pub fn new() -> Self {
         Self {
-            guidance: SuperiorDoubleWallGuidance::new(X, -100.0, 100.0),
+            guidance: SuperiorDoubleWallGuidance::new(X, -30.0, 30.0, 1000.0, 10.0),
             controller: PController::new(),
             model: ThreeDof::new(SystemState::initial_state()),
         }
@@ -81,7 +81,7 @@ impl Simulation {
     pub fn step(&mut self) -> (SystemState, Reference, Deflections, SystemState) {
         let delta_t = 0.01;
 
-        let state = self.model.get_state();
+        let mut state = self.model.get_state();
         let reference = self.guidance.get_reference(state);
         let control_inputs = self.controller.step(state, reference, delta_t);
 

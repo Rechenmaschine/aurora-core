@@ -5,7 +5,10 @@ use crate::{Reference, SystemState};
 pub struct SuperiorDoubleWallGuidance{
     pub axis: Axis,
     pub first_wall: f64,
-    pub second_wall: f64
+    pub second_wall: f64,
+    pub stabilization_time: f64,
+    pub braking_height: f64,
+    pub sym_deflection: f64,
 }
 
 pub enum Axis {
@@ -18,8 +21,15 @@ type Angle = f32;
 
 type GuidanceOutput = f32;
 impl SuperiorDoubleWallGuidance {
-    pub fn new(axis: Axis, first_wall: f64, second_wall: f64) -> Self {
-        Self { axis, first_wall, second_wall }
+    pub fn new(axis: Axis, first_wall: f64, second_wall: f64, stabilization_time: f64, braking_height: f64) -> Self {
+        Self {
+            axis,
+            first_wall,
+            second_wall,
+            stabilization_time,
+            braking_height,
+            sym_deflection: 0.0,
+        }
     }
     fn compute_zone(&mut self, state_inertial_frame_pos: Vector3<f64>) -> DoubleWallZone {
         match self.axis {
@@ -74,6 +84,20 @@ impl Guidance for SuperiorDoubleWallGuidance{
     type Reference = Reference;
 
     fn get_reference(&mut self, state: Self::State) -> Self::Reference {
+        // Stabilization phase
+        if state.total_time <= self.stabilization_time {
+            self.sym_deflection = 0.0;
+            println!("Stabilization phase ongoing");
+            //return Reference(/* suitable value for stabilization */);
+        }
+        // Braking phase
+        else if state.inertial_frame_position.z >= self.braking_height {
+            self.sym_deflection = 0.8; // Example braking value
+            println!("Braking maneuver in progress");
+            //return Reference(/* suitable value for braking */);
+        }
+
+        // Normal Guidance
         let current_zone = self.compute_zone( state.inertial_frame_position);
 
         match current_zone {

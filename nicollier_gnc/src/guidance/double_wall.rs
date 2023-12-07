@@ -95,8 +95,9 @@ impl Guidance for DoubleWallGuidance {
     type Reference = Reference;
 
     fn get_reference(&mut self, state: Self::State) -> Self::Reference {
+        /*
         // Stabilization phase
-        /*if total_time <= self.stabilization_time {
+        if total_time <= self.stabilization_time {
             self.sym_deflection = 0.0;
             println!("Stabilization phase ongoing");
         }
