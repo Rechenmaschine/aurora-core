@@ -32,7 +32,6 @@ impl Controller for PController {
         if (error.abs() > PI as f64) {
             error = -1.0 * error.signum() * (2.0 * PI as f64 - error.abs());
         }
-        println!("{}", error);
         //asym -1.0 is left, 1.0 is right
         let output = Deflections {
             sym: 0.0,
