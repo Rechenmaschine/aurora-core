@@ -1,5 +1,6 @@
 pub mod three_dof;
 pub mod four_dof;
+mod six_dof;
 
 pub trait Model {
     type State;

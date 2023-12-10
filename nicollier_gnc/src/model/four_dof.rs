@@ -1,23 +1,17 @@
-//
-//     _    ____  ___ ____
-//    / \  |  _ \|_ _/ ___|
-//   / _ \ | |_) || |\___ \
-//  / ___ \|  _ < | | ___) |
-// /_/   \_\_| \_\___|____/
-//by GNC Crew
+use std::arch::x86_64::_xgetbv;
+use std::f64::consts::PI;
 use crate::model::four_dof::model_params_parachute::{
     CANOPY_AREA, C_D_0, C_D_SYM_DEFLECTION, C_L_0, C_L_SYM_DEFLECTION, K_ROLL, MASS, T_ROLL,
 };
 use crate::model::four_dof::natural_constants::{AIR_DENSITY, GRAV};
 use crate::model::Model;
-use crate::{Deflections, SystemState};
-use nalgebra::{Rotation3, Vector3};
+use crate::{Deflections, SystemState,get_wind};
+use nalgebra::{Rotation2, Rotation3, Vector2, Vector3};
 
 pub struct FourDof {
     state: SystemState,
-    wind: Vector3<f64>, //definition von wind vektor vom type vector3<f64>, relative to inertial frame
 }
-// Definition of Parameters, how to access: e.g. let gravitational_acceleration = natural_constants::GRAV;
+// Definition of Parameters, parameter needs to be included in the use statement above
 mod model_params_parachute {
     // System parameters
     pub const CANOPY_AREA: f64 = 10.094; // [m²]
@@ -39,39 +33,27 @@ mod natural_constants {
 }
 
 impl FourDof {
+
     pub fn new(state: SystemState) -> Self {
         Self {
-            state,                             //nix gut diese
-            wind: Vector3::new(0.0, 0.0, 0.0), //two-dimensional vector at 3dof, but here three
+            state,
         }
     }
-    pub fn set_wind(&mut self, wind: Vector3<f64>) {
-        self.wind = wind;
-    }
-
-    fn get_airspeed(&self) -> f64 {
-        //(self.wind+self.state.body_frame_velocity).norm()//norm is the length of the vector, calculates airspeed from wind and body frame velocity
-        (self.state.body_frame_velocity.x * self.state.body_frame_velocity.x
-            + self.state.body_frame_velocity.z * self.state.body_frame_velocity.z)
-            .sqrt()
+    fn get_inertial_airspeed(&self) -> Vector3<f64>{
+        self.state.inertial_frame_velocity-get_wind(self.state.inertial_frame_position.z)
     }
     fn get_alpha(&self) -> f64 {
-        //get alpha, rotation is from inertial to body
-        //let body_air_speed =self.state.body_frame_velocity;//+Rotation3::new(self.state.inertial_frame_angle)*self.wind*0; //peri had no wind included, but copilot said it should be included, makes sense because drag and lift depend on airspeed
-        //body_air_speed.z.atan2(body_air_speed.x)
-        self.state
-            .body_frame_velocity
-            .z
-            .atan2(self.state.body_frame_velocity.x)
+        let body_airvector= Rotation3::new(self.state.inertial_frame_angle)*self.get_inertial_airspeed();
+        body_airvector.z.atan2(body_airvector.x)
     }
     fn get_force(&self, sym_deflections: f64) -> Vector3<f64> {
         //calculate the force vector which is acting on the parachute, unsure
         //get the Force
         let mut ret: Vector3<f64> = Vector3::new(0.0, 0.0, 0.0);
-        let airspeed = self.get_airspeed();
+        let body_airvector= Rotation3::new(self.state.inertial_frame_angle)*self.get_inertial_airspeed();
+        let airspeed = (body_airvector.x * body_airvector.x + body_airvector.z * body_airvector.z).sqrt();
         let alpha = self.get_alpha();
         let roll = self.state.inertial_frame_angle.x;
-
         // calcultate the lift(L) and drag (D) coefficients
         let lift: f64 = 0.5
             * AIR_DENSITY
@@ -89,7 +71,7 @@ impl FourDof {
         ret.x = lift * alpha.sin() - drag * alpha.cos();
         ret.y = MASS * GRAV * roll.sin();
         ret.z = -lift * alpha.cos() - drag * alpha.sin() + MASS * GRAV * roll.cos();
-        //ret=Rotation3::new(self.state.inertial_frame_angle)*ret;//dtp=difference to periphas
+        //ret=Rotation3::new(self.state.inertial_frame_angle)*ret;//different to periphase
         return ret;
     }
 }
@@ -100,82 +82,49 @@ impl Model for FourDof {
         self.state //letzte Zeile wird in Rust automatisch ausgegeben, wenn das semikolon fehlt  ->
     }
     fn step(&mut self, input: Self::Input, delta_t: f64) -> Self::State {
-        //wieso muss hier Self gorssgeschrieben werden
-
-        //if self.state.inertial_frame_position.z< -1400.0{
-        //    self.state.inertial_frame_position.z=-1200.0;
-        //}
         //update accelerations (at the body frame)
         self.state.body_frame_acceleration.x = (1.0 / MASS) * self.get_force(input.sym).x
             - self.state.body_frame_velocity.z
                 * self.state.inertial_frame_angle_velocity.z
                 * self.state.inertial_frame_angle.x.sin();
-        self.state.body_frame_acceleration.y = 0.0; //could be changed (1.0 / MASS) * self.get_force(input.sym).y;//not like peri
+        self.state.body_frame_acceleration.y = 0.0;
         self.state.body_frame_acceleration.z = (1.0 / MASS) * self.get_force(input.sym).z
             + self.state.body_frame_velocity.x
                 * self.state.inertial_frame_angle_velocity.z
                 * self.state.inertial_frame_angle.x.sin();
-
+        //update angular velocities (at the inertial frame)
         self.state.inertial_frame_angle_velocity.x =
             (K_ROLL * input.asym - self.state.inertial_frame_angle.x) / T_ROLL;
         self.state.inertial_frame_angle_velocity.y = 0.0;
-        //self.state.inertial_frame_angle_velocity.z=0.0;
-        if self.state.body_frame_velocity.x * self.state.inertial_frame_angle.x.cos().abs() > f64::EPSILON{
-            self.state.inertial_frame_angle_velocity.z = (1.0 / MASS) * self.get_force(input.sym).y
+        if self.state.body_frame_velocity.x.abs() * self.state.inertial_frame_angle.x.cos().abs() > f64::EPSILON{
+            self.state.inertial_frame_angle_velocity.z = (1.0 / MASS) * self.get_force(input.sym).y//=1/mass*Fg*tan(roll)/v_body_x
                 / (self.state.body_frame_velocity.x * self.state.inertial_frame_angle.x.cos())
-                + (self.state.body_frame_velocity.z * self.state.inertial_frame_angle_velocity.x)
+                 +(self.state.body_frame_velocity.z * self.state.inertial_frame_angle_velocity.x)//body_v_Z
                 / (self.state.body_frame_velocity.x * self.state.inertial_frame_angle.x.cos()); //wouldnt it be better to use the intertial frame velocity here?, i didnt quite get this
         }else{
-            println!("the body frame velocity x is {} and roll cos is {}", self.state.body_frame_velocity.x, self.state.inertial_frame_angle.x.cos().abs());
+            println!("the absolut body frame velocity x is {} and absolut roll cos is {}", self.state.body_frame_velocity.x.abs(), self.state.inertial_frame_angle.x.cos().abs());
         }
 
-        //println!("inertial angle velocity z{}",self.state.inertial_frame_angle_velocity.z);
-        /*println!(
-            "force:{}, body frame vel.x:{}, body frame vel.z:{}inertial frame angle cos:{}",
-            self.get_force(input.sym).y,
-            self.state.body_frame_velocity.x,
-            self.state.body_frame_velocity.z,
-            self.state.inertial_frame_angle.x.cos()
-        );*/
+        self.state.body_frame_velocity += delta_t * self.state.body_frame_acceleration; //integrate acceleration(body frame)
+        self.state.inertial_frame_velocity = Rotation3::new(self.state.inertial_frame_angle).transpose() * self.state.body_frame_velocity;//change frames for velocities, from body to inertial frame,transpose=inverse of rotation matrix, so we are going from body to inertial frame
+        self.state.inertial_frame_position += delta_t * self.state.inertial_frame_velocity; //Integrate Velocities (inertial frame)
+        self.state.inertial_frame_angle += delta_t * self.state.inertial_frame_angle_velocity; //integrate Angular velocities (inertial frame)
 
-        //integrate accelerations(body frame)
-
-        self.state.body_frame_velocity += delta_t * self.state.body_frame_acceleration;
-
-        self.state.inertial_frame_velocity =
-            Rotation3::new(self.state.inertial_frame_angle).transpose() * self.state.body_frame_velocity;
-
-        //change frames for velocities, from body to inertial frame,transpose=inverse of rotation matrix, so we are going from body to inertial frame
-        //self.state.inertial_frame_velocity = Rotation3::new(self.state.inertial_frame_angle).transpose() * self.state.body_frame_velocity;
-        //println!("{}",self.state.inertial_frame_acceleration.z);
-        //Integrate Velocities (inertial frame)
-        self.state.inertial_frame_position += delta_t * self.state.inertial_frame_velocity;
-        //integrate Angular velocities (inertial frame)
-        self.state.inertial_frame_angle += delta_t * self.state.inertial_frame_angle_velocity;
-
-        self.state.inertial_frame_angle.x = self.state.inertial_frame_angle.x % (2.0 * std::f64::consts::PI);
-        self.state.inertial_frame_angle.y = self.state.inertial_frame_angle.y % (2.0 * std::f64::consts::PI);
-        self.state.inertial_frame_angle.z = self.state.inertial_frame_angle.z % (2.0 * std::f64::consts::PI);
 
         //we are joining swissloop due to stall(rocket is falling down)
-        if self.state.body_frame_velocity.x < 0.02 {
-            //println!("the total forward velocity is lower than 0.02m/s, the speed relative to the wind is {}: we could be joining swissloop due to stall", self.state.body_frame_velocity.dot(&(self.wind - self.state.body_frame_velocity)) / self.state.body_frame_velocity.norm());
-            //unsure if my calculation is correct
+        if self.state.body_frame_velocity.x < 0.02 || (Rotation3::new(self.state.inertial_frame_angle)*self.get_inertial_airspeed()).x < 0.02 {
+            println!("the body_frame_velocity.x is {}, the speed relative to the wind is {}: we could be joining swissloop due to stall", self.state.body_frame_velocity.x, (Rotation3::new(self.state.inertial_frame_angle)*self.get_inertial_airspeed()).x); //self.state.body_frame_velocity.dot(&(self.wind - self.state.body_frame_velocity)) / self.state.body_frame_velocity.norm());
         }
-        //we could be flying hearts or other symbols as our energy phase, would be dope
-        //the roll angle almost at 90 degrees, we are doing a flip, wuuuhuuu
+        //the roll angle almost at 90 degrees, we are doing a flip
         if self.state.inertial_frame_angle.x.cos() < 0.2 {
-            //println!("the roll angle is almost at 90 degrees, the angle relative to the wind is {}: we might be doing a flip, wuuuhuuu", "unknown");
+            println!("the roll angle is almost at 90 degrees, the angle relative to the wind is {}: we might be doing a flip", "unknown");
         }
-        //self.state.inertial_frame_position.z-=10.0;
         self.state.total_time += delta_t;
-        return self.state; //wieso
+        return self.state;
     }
     fn landed(&self) -> bool {
-        //why is here a ref
-        if self.state.inertial_frame_position.z > 0.0 {
-            println!("landed,z: {}", self.state.inertial_frame_position.z);
-        }
+
+        println!("wind at the groud {:?},{}", get_wind(self.state.inertial_frame_position.z),self.state.inertial_frame_position.z);
         self.state.inertial_frame_position.z > 0.0 //&& self.state.inertial_frame_velocity.norm()<0.1
     }
 }

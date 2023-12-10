@@ -87,13 +87,13 @@ impl Guidance for SuperiorDoubleWallGuidance{
         // Stabilization phase
         if state.total_time <= self.stabilization_time {
             self.sym_deflection = 0.0;
-            println!("Stabilization phase ongoing");
+            //println!("Stabilization phase ongoing");
             //return Reference(/* suitable value for stabilization */);
         }
         // Braking phase
         else if state.inertial_frame_position.z >= self.braking_height {
             self.sym_deflection = 0.8; // Example braking value
-            println!("Braking maneuver in progress");
+            //println!("Braking maneuver in progress");
             //return Reference(/* suitable value for braking */);
         }
 
