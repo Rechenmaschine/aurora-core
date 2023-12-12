@@ -1,18 +1,18 @@
 //dont know if I get it finished until christmas
-
+/*
 use std::arch::x86_64::_xgetbv;
 use std::f64::consts::PI;
 use crate::model::six_dof::model_params::*;
 use crate::model::Model;
 use crate::{Deflections, SystemState,get_wind};
-use nalgebra::{Rotation2, Rotation3, Vector2, Vector3, Matrix3, Vector6, Matrix6,LU};
+use nalgebra::{Rotation2, Rotation3, Vector2, Vector3, Matrix3, Vector6, Matrix6,LU,DMatrix};
 
 pub struct SixDof {
     state: SystemState,
 }
 // Definition of Parameters, parameter needs to be included in the use statement above
 mod model_params {
-    use nalgebra::{Vector3, Matrix3};
+    use nalgebra::{Vector3, Matrix3, DMatrix, OMatrix, Dyn};
     //natural constants
     pub const GRAV: f64 = 9.81; // [m/s²] gravitational acceleration
     pub const AIR_DENSITY: f64 = 1.225; // [kg/m³]
@@ -25,12 +25,12 @@ mod model_params {
     pub const RIGGING_ANGLE: f64 = -0.2094; // -12 deg
 
     // Position vector for R_BM (Body Mass Center?)
-    pub fn r_bm() -> Vector3<f64> {
-        Vector3::new(0.5511, 0.0, -3.4796)
-    }
+    pub fn m_vector_mc_amc() -> Vector3<f64> {
+        Vector3::new(0.5511, 0.0, -3.4796)//R_BM_X, R_BM_Y, R_BM_Z
+    }//may be mutable
 
     // Inertia tensor (must be symmetric)
-    pub fn i() -> Matrix3<f64> {
+    pub fn m_inertia() -> Matrix3<f64> {
         Matrix3::new(
             18.608,  0.0005,  0.0034,
             0.0005, 18.6083, -0.00003,
@@ -38,24 +38,15 @@ mod model_params {
         )
     }
 
-    // Additional inertia tensor for another configuration (must be symmetric)
-    // Assuming these are diagonal matrices based on the provided data
-    pub fn i_am() -> Matrix3<f64> {
-        Matrix3::new(
-            0.1642, 0.0,     0.0,
-            0.0,    2.0841,  0.0,
-            0.0,    0.0,     14.8661
-        )
-    }
+    pub fn m_apparent_mass() -> OMatrix<f64, Dyn, Dyn> {//the type is kinda weird, i think it stands for dynamic sizing or something
+        DMatrix::from_diagonal(&Vector3::new(0.1642,2.0841,14.8661))
+    }//may be mutable! <-----------
 
-    // Another additional inertia tensor (must be symmetric)
-    pub fn i_ai() -> Matrix3<f64> {
-        Matrix3::new(
-            1.2705, 0.0,    0.0,
-            0.0,    2.6937, 0.0,
-            0.0,    0.0,    0.3400
-        )
-    }
+    m_ApparentInertia.diagonal() << I_AI_XX, I_AI_YY, I_AI_ZZ;
+    pub fn m_apparent_inertia()->OMatrix<f64,Dyn,Dyn>{
+        DMatrix::from_diagonal(&Vector3::new(1.2705,2.6937,0.3400))//I_AI_XX, I_AI_YY, I_AI_ZZ
+    }//may be mutable
+
 
     // Aerodynamic coefficients obtained using SysID
     pub const C_D_0: f64 = 0.1543;
@@ -80,10 +71,6 @@ mod model_params {
 
 
 impl SixDof {
-
-
-
-
     pub fn new(state: SystemState) -> Self {
         Self {
             state,
@@ -103,14 +90,17 @@ impl SixDof {
     fn getA(&self)->Matrix6<f64>{
         let eye = Matrix3::<f64>::identity();
 
-        //let A= Matrix6::<f64>::zeros(); //TODu
-        let A=Matrix4::new(
-            MASS*eye
+        //let A= Matrix6::<f64>::zeros(); //TODO
+        let A=Matrix6::<f64>new(//inertia matrix, its adding 3*3 matrices, z-form starting from the top left
+            (MASS) * eye + change_tensor_frame(m_ApparentMass),
+            -change_tensor_frame(m_ApparentMass) * skew_vector_bm(),
+            skew_vector_bm() * change_tensor_frame(m_ApparentMass),
+            m_Inertia + change_tensor_frame(m_ApparentInertia) - skew_vector_bm() * change_tensor_frame(m_ApparentMass) * skew_vector_bm(),
         )
         return A;
     }
     fn getB(&self)->Vector6<f64>{
-        Vector6::<f64>::zeros() //TODu
+        Vector6::<f64>::zeros() //TODO
     }
 
 }
@@ -167,3 +157,4 @@ impl Model for SixDof {
         self.state.inertial_frame_position.z > 0.0 //&& self.state.inertial_frame_velocity.norm()<0.1
     }
 }
+*/
