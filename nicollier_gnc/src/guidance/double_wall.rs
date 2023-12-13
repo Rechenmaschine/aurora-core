@@ -1,71 +1,46 @@
 use crate::guidance::Guidance;
 use crate::{Reference, SystemState};
 
+
 pub struct DoubleWallGuidance {
-    nod_rate: f64,
-    //total_time: f64,
     yaw_reference: f64,
-    yaw_previous: f64,
     sym_deflection: f64,
-    sym_deflection_previous: f64,
     target_wall: TargetWall,
-    ramp_time: f64,
     stabilization_time: f64,
     braking_height: f64,
-    steady_sym_def: f64,
     north_wall_x: f64,
+    //100.0
     south_wall_x: f64,
+    //-100.0
     east_wall_y: f64,
+    //100.0
     west_wall_y: f64,
+    //-100.0
 }
 
 impl DoubleWallGuidance {
     pub fn new(
-        nod_rate: f64,
-        ramp_time: f64,
         stabilization_time: f64,
         braking_height: f64,
-        steady_sym_def: f64,
+        north_wall_x: f64,
+        south_wall_x: f64,
+        east_wall_y: f64,
+        west_wall_y: f64,
     ) -> Self {
         Self {
-            nod_rate,
             yaw_reference: std::f64::consts::FRAC_PI_2 - std::f64::consts::PI / 16.0,
-            yaw_previous: 0.0,
             sym_deflection: 0.0,
-            sym_deflection_previous: 0.0,
             target_wall: TargetWall::East,
-            ramp_time,
             stabilization_time,
             braking_height,
-            steady_sym_def,
-            north_wall_x: 100.0,
-            south_wall_x:-100.0,
-            east_wall_y:100.0,
-            west_wall_y:-100.0
+            north_wall_x,
+            south_wall_x,
+            east_wall_y,
+            west_wall_y,
         }
     }
 
-    /*fn generate_yaw_ramp(&mut self) {
-        let yaw_tolerance = std::f64::consts::PI / (self.nod_rate * self.ramp_time);
-        if (self.yaw_reference - self.yaw_previous) > yaw_tolerance {
-            self.yaw_reference = self.yaw_previous + yaw_tolerance;
-        } else if (self.yaw_reference - self.yaw_previous) < -yaw_tolerance {
-            self.yaw_reference = self.yaw_previous - yaw_tolerance;
-        }
-        self.yaw_previous = self.yaw_reference;
-    }
 
-    fn generate_sym_ramp(&mut self) {
-        let sym_tolerance = 1.0 / (self.nod_rate * self.ramp_time);
-        if (self.sym_deflection - self.sym_deflection_previous) > sym_tolerance {
-            self.sym_deflection = self.sym_deflection_previous + sym_tolerance;
-        } else if (self.sym_deflection - self.sym_deflection_previous) < -sym_tolerance {
-            self.sym_deflection = self.sym_deflection_previous - sym_tolerance;
-        }
-        self.sym_deflection_previous = self.sym_deflection;
-    }
-
-     */
 
     fn target_wall_north(&mut self) {
         self.yaw_reference =  std::f64::consts::PI / 16.0;
@@ -95,9 +70,9 @@ impl Guidance for DoubleWallGuidance {
     type Reference = Reference;
 
     fn get_reference(&mut self, state: Self::State) -> Self::Reference {
-        /*
+
         // Stabilization phase
-        if total_time <= self.stabilization_time {
+        if state.total_time <= self.stabilization_time {
             self.sym_deflection = 0.0;
             println!("Stabilization phase ongoing");
         }
@@ -105,9 +80,9 @@ impl Guidance for DoubleWallGuidance {
         else if state.inertial_frame_position.z >= self.braking_height {
             self.sym_deflection = 0.8; // Example braking value
             println!("Braking maneuver in progress");
-        }*/
+        }
         // Normal guidance phase
-        self.sym_deflection = self.steady_sym_def;
+
         // Wall targeting logic
         match self.target_wall {
             TargetWall::North => {
