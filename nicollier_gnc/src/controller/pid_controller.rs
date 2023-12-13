@@ -1,8 +1,8 @@
 use crate::controller::Controller;
 use crate::{Deflections, Reference, SystemState};
 use std::f32::consts::PI;
-pub struct PController();
-impl PController {
+pub struct PIDController();
+impl PIDController {
     pub fn new() -> Self {
         Self()
     }
@@ -10,8 +10,9 @@ impl PController {
 pub fn sigmoid(z: f64) -> f64 {
     1.0 / (1.0 + f64::exp(2.0 * -z))
 }
+
 const K: f64 = 2.0;
-impl Controller for PController {
+impl Controller for PIDController {
     type State = SystemState;
     type Reference = Reference;
     type Output = Deflections;
